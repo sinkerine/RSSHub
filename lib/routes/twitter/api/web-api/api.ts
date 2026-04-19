@@ -41,20 +41,22 @@ const getUserData = (id) =>
         });
     });
 
-const cacheTryGet = async (_id, params, func) => {
+const cacheTryGet = async (_id, params, func, cacheKey = func.name) => {
     const userData: any = await getUserData(_id);
     const id = (userData.data?.user || userData.data?.user_result)?.result?.rest_id;
     if (id === undefined) {
         cache.set(`twitter-userdata-${_id}`, '', config.cache.contentExpire);
         throw new InvalidParameterError('User not found');
     }
-    const funcName = func.name;
     const paramsString = JSON.stringify(params);
-    return cache.tryGet(`twitter:${id}:${funcName}:${paramsString}`, () => func(id, params), config.cache.routeExpire, false);
+    return cache.tryGet(`twitter:${id}:${cacheKey}:${paramsString}`, () => func(id, params), config.cache.routeExpire, false);
 };
 
 const getUserTweets = (id: string, params?: Record<string, any>) =>
-    cacheTryGet(id, params, async (id, params = {}) =>
+    cacheTryGet(
+        id,
+        params,
+        async (id, params = {}) =>
         gatherLegacyFromData(
             await paginationTweets('UserTweets', id, {
                 ...params,
@@ -64,11 +66,15 @@ const getUserTweets = (id: string, params?: Record<string, any>) =>
                 withVoice: true,
                 withV2Timeline: true,
             })
-        )
+        ),
+        'getUserTweets'
     );
 
 const getUserTweetsAndReplies = (id: string, params?: Record<string, any>) =>
-    cacheTryGet(id, params, async (id, params = {}) =>
+    cacheTryGet(
+        id,
+        params,
+        async (id, params = {}) =>
         gatherLegacyFromData(
             await paginationTweets('UserTweetsAndReplies', id, {
                 ...params,
@@ -80,11 +86,15 @@ const getUserTweetsAndReplies = (id: string, params?: Record<string, any>) =>
             }),
             ['profile-conversation-'],
             id
-        )
+        ),
+        'getUserTweetsAndReplies'
     );
 
 const getUserMedia = (id: string, params?: Record<string, any>) =>
-    cacheTryGet(id, params, async (id, params = {}) =>
+    cacheTryGet(
+        id,
+        params,
+        async (id, params = {}) =>
         gatherLegacyFromData(
             await paginationTweets('UserMedia', id, {
                 ...params,
@@ -95,11 +105,15 @@ const getUserMedia = (id: string, params?: Record<string, any>) =>
                 withVoice: true,
                 withV2Timeline: true,
             })
-        )
+        ),
+        'getUserMedia'
     );
 
 const getUserLikes = (id: string, params?: Record<string, any>) =>
-    cacheTryGet(id, params, async (id, params = {}) =>
+    cacheTryGet(
+        id,
+        params,
+        async (id, params = {}) =>
         gatherLegacyFromData(
             await paginationTweets('Likes', id, {
                 ...params,
@@ -109,11 +123,15 @@ const getUserLikes = (id: string, params?: Record<string, any>) =>
                 withVoice: false,
                 withV2Timeline: true,
             })
-        )
+        ),
+        'getUserLikes'
     );
 
 const getUserTweet = (id: string, params?: Record<string, any>) =>
-    cacheTryGet(id, params, async (id, params = {}) =>
+    cacheTryGet(
+        id,
+        params,
+        async (id, params = {}) =>
         gatherLegacyFromData(
             await paginationTweets(
                 'TweetDetail',
@@ -129,7 +147,8 @@ const getUserTweet = (id: string, params?: Record<string, any>) =>
                 ['threaded_conversation_with_injections_v2']
             ),
             ['homeConversation-', 'conversationthread-']
-        )
+        ),
+        'getUserTweet'
     );
 
 const getSearch = async (keywords: string, params?: Record<string, any>) =>
