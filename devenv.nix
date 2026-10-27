@@ -1,6 +1,9 @@
 { pkgs, lib, config, ... }:
 
 {
+  # The flake integration does not provide the CLI's project-root discovery.
+  devenv.root = builtins.toString ./.;
+
   # https://devenv.sh/basics/
   env = {
     NODE_ENV = "dev";
@@ -67,6 +70,14 @@
   };
 
   enterShell = ''
+    # The dotenv module is unavailable when this configuration is loaded
+    # through the flake integration. Load the project environment explicitly.
+    if [ -f .env ]; then
+      set -a
+      . ./.env
+      set +a
+    fi
+
     echo ""
     echo "🚀 RSSHub Development Environment"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -98,9 +109,6 @@
       pnpm install
     fi
   '';
-
-  # https://devenv.sh/integrations/dotenv/
-  dotenv.enable = true;  # Automatically load .env file
 
   # Load local overrides if they exist
   # Users can create devenv.local.nix for personal customizations
