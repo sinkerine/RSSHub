@@ -4,7 +4,7 @@ import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
 
 import { baseUrl, gqlFeatures, gqlMap, initGqlMap } from './constants';
-import { gatherLegacyFromData, paginationTweets, twitterGot } from './utils';
+import { gatherLegacyFromData, normalizeUser, paginationTweets, twitterGot } from './utils';
 
 const getUserData = (id) =>
     cache.tryGet(`twitter-userdata-${id}`, () => {
@@ -165,18 +165,15 @@ const getList = async (id: string, params?: Record<string, any>) =>
 const getUser = async (id: string) => {
     const userData: any = await getUserData(id);
 
-    if (!userData.data.user) {
+    const user = (userData.data?.user || userData.data?.user_result)?.result;
+    if (!user) {
         throw new InvalidParameterError("This account doesn't exist");
     }
-    if (userData.data.user.result.__typename === 'UserUnavailable') {
-        throw new InvalidParameterError(userData.data.user.result.message || 'User is unavailable');
+    if (user.__typename === 'UserUnavailable') {
+        throw new InvalidParameterError(user.message || 'User is unavailable');
     }
 
-    return {
-        profile_image_url: userData.data?.user?.result?.avatar?.image_url,
-        ...userData.data?.user?.result?.core,
-        ...(userData.data?.user || userData.data?.user_result)?.result?.legacy,
-    };
+    return normalizeUser(user);
 };
 
 const getHomeTimeline = async (id: string, params?: Record<string, any>) =>

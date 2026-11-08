@@ -22,7 +22,15 @@ export const fallbackIds: Record<string, string> = {
 const operationNames = Object.keys(fallbackIds);
 
 async function fetchTwitterPage(): Promise<string> {
-    const response = await ofetch('https://x.com', {
+    // Anonymous visitors can receive a static landing page without the web client.
+    const token = config.twitter.authToken?.find(Boolean);
+    const response = await ofetch('https://x.com/?mx=2', {
+        headers: {
+            'user-agent': config.trueUA,
+            ...(token && { cookie: `auth_token=${token}` }),
+        },
+        timeout: 10000,
+        retry: 0,
         parseResponse: (txt) => txt,
     });
     return response as unknown as string;
@@ -43,23 +51,27 @@ function extractQueryIds(scriptContent: string): Record<string, string> {
 async function fetchAndExtractIds(): Promise<Record<string, string>> {
     const html = await fetchTwitterPage();
 
-    // Extract main.hash.js URL — it contains all the GraphQL query IDs we need
-    const mainMatch = html.match(/\/client-web\/main\.([a-z0-9]+)\./);
-    if (!mainMatch) {
-        logger.warn('twitter gql-id-resolver: main.js URL not found in Twitter page');
+    // Preserve the advertised URL, including any client variant or filename suffix.
+    const mainUrl = html.match(/https:\/\/abs\.twimg\.com\/responsive-web\/client-web(?:-legacy)?\/main\.[\w.-]+\.js\b/)?.[0];
+    if (!mainUrl) {
+        logger.warn('twitter gql-id-resolver: main.js URL not found in Twitter page; the session may be invalid or X may have changed its page');
         return {};
     }
 
-    const mainUrl = `https://abs.twimg.com/responsive-web/client-web/main.${mainMatch[1]}.js`;
     logger.debug(`twitter gql-id-resolver: fetching ${mainUrl}`);
 
+    // Do not forward X session cookies to the static asset host.
     const content = await ofetch(mainUrl, {
+        timeout: 10000,
+        retry: 0,
         parseResponse: (txt) => txt,
     });
     return extractQueryIds(content as unknown as string);
 }
 
 let resolvePromise: Promise<Record<string, string>> | null = null;
+let retryAfter = 0;
+const FAILURE_RETRY_DELAY = 60000;
 
 export async function resolveQueryIds(): Promise<Record<string, string>> {
     // Check cache first
@@ -76,6 +88,11 @@ export async function resolveQueryIds(): Promise<Record<string, string>> {
         }
     }
 
+    // Avoid fetching the same unusable landing page for every feed request.
+    if (Date.now() < retryAfter) {
+        return { ...fallbackIds };
+    }
+
     // Deduplicate concurrent requests
     if (!resolvePromise) {
         resolvePromise = (async () => {
@@ -84,17 +101,20 @@ export async function resolveQueryIds(): Promise<Record<string, string>> {
                 const ids = await fetchAndExtractIds();
 
                 if (Object.keys(ids).length > 0) {
+                    retryAfter = 0;
                     await cache.set(CACHE_KEY, JSON.stringify(ids), config.cache.contentExpire);
                     const found = operationNames.filter((name) => ids[name]);
                     const missing = operationNames.filter((name) => !Object.hasOwn(ids, name));
-                    logger.debug(`twitter gql-id-resolver: resolved ${found.length}/${operationNames.length} query IDs. Missing: ${missing.join(', ') || 'none'}`);
+                    logger.info(`twitter gql-id-resolver: resolved ${found.length}/${operationNames.length} query IDs. Missing: ${missing.join(', ') || 'none'}`);
                 } else {
-                    logger.warn('twitter gql-id-resolver: failed to extract any query IDs, using fallback');
+                    retryAfter = Date.now() + FAILURE_RETRY_DELAY;
+                    logger.warn('twitter gql-id-resolver: failed to extract any query IDs, using fallback; discovery will retry in 60s');
                 }
 
                 return ids;
             } catch (error) {
-                logger.warn(`twitter gql-id-resolver: error fetching query IDs: ${error}. Using fallback.`);
+                retryAfter = Date.now() + FAILURE_RETRY_DELAY;
+                logger.warn(`twitter gql-id-resolver: error fetching query IDs: ${error}. Using fallback; discovery will retry in 60s.`);
                 return {};
             } finally {
                 resolvePromise = null;

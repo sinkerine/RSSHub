@@ -308,24 +308,23 @@ export const paginationTweets = async (endpoint: string, userId: number | undefi
     return gridEntries || moduleItems || entries || [];
 };
 
-const getLegacyUser = (tweet: any) => tweet.core?.user_result?.result?.legacy || tweet.core?.user_results?.result?.legacy;
-
-const getCoreUser = (tweet: any) => tweet.core?.user_result?.result?.core || tweet.core?.user_results?.result?.core;
-
-const hydrateLegacyUser = (legacy: any, tweet: any) => {
-    legacy.user = getLegacyUser(tweet);
-
-    const coreUser = getCoreUser(tweet);
-    if (!legacy.user || !coreUser) {
+export const normalizeUser = (user: any) => {
+    if (!user) {
         return;
     }
 
-    if (coreUser.name) {
-        legacy.user.name = coreUser.name;
-    }
-    if (coreUser.screen_name) {
-        legacy.user.screen_name = coreUser.screen_name;
-    }
+    // Current query IDs return split profile fields without a legacy user object.
+    return {
+        ...user.legacy,
+        ...user.core,
+        ...(user.rest_id && { id_str: user.rest_id }),
+        ...(user.avatar?.image_url && { profile_image_url: user.avatar.image_url, profile_image_url_https: user.avatar.image_url }),
+        ...user.profile_bio,
+    };
+};
+
+const hydrateLegacyUser = (legacy: any, tweet: any) => {
+    legacy.user = normalizeUser(tweet.core?.user_result?.result || tweet.core?.user_results?.result);
 };
 
 export function gatherLegacyFromData(entries: any[], filterNested?: string[], userId?: number | string) {
