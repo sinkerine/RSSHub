@@ -50,13 +50,15 @@ const twitterGot = async (url, params) => {
 };
 
 const paginationTweets = async (endpoint, userId, variables, path?) => {
-    const { data } = await twitterGot(baseUrl + endpoint, {
+    const params = {
         variables: JSON.stringify({
             ...variables,
             rest_id: userId,
         }),
         features: gqlFeatures,
-    });
+    };
+    logger.debug(`twitter debug: request URL: ${baseUrl + endpoint}?${queryString.stringify(params)}`);
+    const { data } = await twitterGot(baseUrl + endpoint, params);
 
     let instructions;
     if (path) {

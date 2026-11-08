@@ -264,6 +264,7 @@ export const paginationTweets = async (endpoint: string, userId: number | undefi
             });
             return data;
         }
+        logger.debug(`twitter debug: request URL: ${baseUrl + gqlMap[endpoint]}?${queryString.stringify(params)}`);
         const transactionId = endpoint === 'UserTweetsAndReplies' ? await getClientTransactionId('GET', new URL(baseUrl + gqlMap[endpoint]).pathname) : undefined;
         const { data } = await twitterGot(baseUrl + gqlMap[endpoint], params, {
             headers: transactionId

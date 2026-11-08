@@ -1,3 +1,4 @@
+import queryString from 'query-string';
 import type { ApiV2Includes, MediaObjectV2, TweetEntityHashtagV2, TweetEntityMentionV2, TweetEntityUrlV2, TweetV2, TwitterApiReadOnly, UserV2 } from 'twitter-api-v2';
 import { TwitterApi } from 'twitter-api-v2';
 
@@ -5,6 +6,7 @@ import { config } from '@/config';
 import ConfigNotFoundError from '@/errors/types/config-not-found';
 import InvalidParameterError from '@/errors/types/invalid-parameter';
 import cache from '@/utils/cache';
+import logger from '@/utils/logger';
 
 import { getTwitterUserCacheKey } from '../../utils';
 
@@ -296,14 +298,16 @@ const cacheTryGet = async (_id: string, params: DevApiParams | undefined, operat
 
 const getUserTimeline = async (id: string, params?: DevApiParams, options: DevApiParams = {}) => {
     const client = await getAppClient();
-    const response = await client.v2.get(`users/${id}/tweets`, {
+    const requestParams = {
         max_results: params?.count ?? 20,
         expansions: 'author_id,attachments.media_keys,referenced_tweets.id,referenced_tweets.id.author_id',
         'tweet.fields': 'created_at,entities,conversation_id,referenced_tweets,author_id,in_reply_to_user_id',
         'user.fields': 'username,name,profile_image_url,description',
         'media.fields': 'preview_image_url,url,type,width,height,variants',
         ...options,
-    });
+    };
+    logger.debug(`twitter debug: request URL: https://api.x.com/2/users/${id}/tweets?${queryString.stringify(requestParams)}`);
+    const response = await client.v2.get(`users/${id}/tweets`, requestParams);
     return mapTweetResponseToLegacy(response);
 };
 
