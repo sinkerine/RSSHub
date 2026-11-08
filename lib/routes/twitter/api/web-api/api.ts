@@ -5,6 +5,7 @@ import ofetch from '@/utils/ofetch';
 
 import { getTwitterUserCacheKey } from '../../utils';
 import { baseUrl, gqlFeatures, gqlMap, initGqlMap } from './constants';
+import { normalizeUser } from './user';
 import type { ApiParams } from './utils';
 import { gatherLegacyFromData, paginationTweets, twitterGot } from './utils';
 
@@ -24,7 +25,7 @@ const getUserResult = (response: any) => {
         throw new Error(`Twitter API user lookup failed (code: ${code})`);
     }
 
-    const user = response?.data?.user;
+    const user = response?.data?.user === undefined ? response?.data?.user_result : response.data.user;
     if (user === null || user?.result === null) {
         throw new InvalidParameterError("This account doesn't exist");
     }
@@ -193,11 +194,7 @@ const getList = async (id: string, params?: ApiParams) =>
 
 const getUser = async (id: string) => {
     const user = await getUserData(id);
-    return {
-        profile_image_url: user.avatar?.image_url,
-        description: user.profile_bio?.description,
-        ...user.core,
-    };
+    return normalizeUser(user);
 };
 
 const getHomeTimeline = async (id: string, params?: ApiParams) =>

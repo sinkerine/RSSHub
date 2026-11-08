@@ -53,7 +53,7 @@ beforeEach(() => {
 describe('Twitter web user lookup', () => {
     it('preserves valid user metadata and caches only the verified web response', async () => {
         cached.set('twitter-userdata-example', { errors: [{ code: 88, message: 'Legacy cached failure' }] });
-        expect(await api.getUser('example')).toEqual({
+        expect(await api.getUser('example')).toMatchObject({
             name: 'Example',
             screen_name: 'example',
             profile_image_url: 'https://example.com/avatar.png',
@@ -64,6 +64,11 @@ describe('Twitter web user lookup', () => {
         expect(cache.tryGet).toHaveBeenCalledWith('twitter:web:userdata:v2:example', expect.any(Function));
         expect(cached.get('twitter-userdata-example')).toEqual({ errors: [{ code: 88, message: 'Legacy cached failure' }] });
         expect(cache.set).not.toHaveBeenCalled();
+    });
+
+    it('accepts the alternate user_result response shape', async () => {
+        vi.mocked(twitterGot).mockResolvedValueOnce({ data: { user_result: structuredClone(user.data.user) } });
+        expect(await api.getUser('example')).toMatchObject({ name: 'Example', screen_name: 'example' });
     });
 
     it.each([

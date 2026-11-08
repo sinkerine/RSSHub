@@ -12,6 +12,7 @@ import proxy from '@/utils/proxy';
 
 import { getClientTransactionId } from './client-transaction';
 import { baseUrl, bearerToken, gqlFeatures, gqlMap, thirdPartySupportedAPI } from './constants';
+import { normalizeUser } from './user';
 // import login from './login';
 
 export type ApiParams = Record<string, string | number | boolean | undefined>;
@@ -306,16 +307,7 @@ export const paginationTweets = async (endpoint: string, userId: number | undefi
 };
 
 const hydrateLegacyUser = (legacy: any, tweet: any) => {
-    const userResult = tweet.core?.user_results?.result;
-    if (!userResult) {
-        return;
-    }
-
-    legacy.user = {
-        name: userResult.core?.name,
-        screen_name: userResult.core?.screen_name,
-        profile_image_url_https: userResult.avatar?.image_url,
-    };
+    legacy.user = normalizeUser(tweet.core?.user_result?.result || tweet.core?.user_results?.result);
 };
 
 export function gatherLegacyFromData(entries: any[], filterNested?: string[], userId?: number | string) {
