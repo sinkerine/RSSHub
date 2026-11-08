@@ -3,11 +3,13 @@ import InvalidParameterError from '@/errors/types/invalid-parameter';
 import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
 
-import { getTwitterUserCacheKey } from '../../utils';
+import { getTwitterUserCacheKey, TWITTER_USER_CACHE_EXPIRE } from '../../utils';
 import { baseUrl, gqlFeatures, gqlMap, initGqlMap } from './constants';
 import { normalizeUser } from './user';
 import type { ApiParams } from './utils';
 import { gatherLegacyFromData, paginationTweets, twitterGot } from './utils';
+
+const isRestId = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
 
 const getUserResult = (response: any) => {
     const errors = response?.errors;
@@ -33,7 +35,7 @@ const getUserResult = (response: any) => {
     if (result?.__typename === 'UserUnavailable') {
         throw new InvalidParameterError('Twitter user is unavailable');
     }
-    if (!result || typeof result.rest_id !== 'string' || result.rest_id.length === 0) {
+    if (!result || !isRestId(result.rest_id)) {
         throw new Error('Twitter API returned an incomplete user response');
     }
     return result;
@@ -41,39 +43,43 @@ const getUserResult = (response: any) => {
 
 const getUserData = async (id: string) => {
     // Other Twitter API adapters cache different schemas under the legacy key.
-    const data = await cache.tryGet(`twitter:web:userdata:v2:${id}`, async () => {
-        const params = {
-            variables: id.startsWith('+')
-                ? JSON.stringify({
-                      userId: id.slice(1),
-                      withSafetyModeUserFields: true,
+    const data = await cache.tryGet(
+        `twitter:web:userdata:v2:${id}`,
+        async () => {
+            const params = {
+                variables: id.startsWith('+')
+                    ? JSON.stringify({
+                          userId: id.slice(1),
+                          withSafetyModeUserFields: true,
+                      })
+                    : JSON.stringify({
+                          screen_name: id,
+                          withSafetyModeUserFields: true,
+                      }),
+                features: JSON.stringify(id.startsWith('+') ? gqlFeatures.UserByRestId : gqlFeatures.UserByScreenName),
+                fieldToggles: JSON.stringify({
+                    withAuxiliaryUserLabels: false,
+                }),
+            };
+
+            const response = config.twitter.thirdPartyApi
+                ? await ofetch(`${config.twitter.thirdPartyApi}${id.startsWith('+') ? gqlMap.UserByRestId : gqlMap.UserByScreenName}`, {
+                      method: 'GET',
+                      params,
+                      headers: {
+                          'accept-encoding': 'gzip',
+                      },
                   })
-                : JSON.stringify({
-                      screen_name: id,
-                      withSafetyModeUserFields: true,
-                  }),
-            features: JSON.stringify(id.startsWith('+') ? gqlFeatures.UserByRestId : gqlFeatures.UserByScreenName),
-            fieldToggles: JSON.stringify({
-                withAuxiliaryUserLabels: false,
-            }),
-        };
+                : await twitterGot(`${baseUrl}${id.startsWith('+') ? gqlMap.UserByRestId : gqlMap.UserByScreenName}`, params, {
+                      allowNoAuth: !id.startsWith('+'),
+                  });
 
-        const response = config.twitter.thirdPartyApi
-            ? await ofetch(`${config.twitter.thirdPartyApi}${id.startsWith('+') ? gqlMap.UserByRestId : gqlMap.UserByScreenName}`, {
-                  method: 'GET',
-                  params,
-                  headers: {
-                      'accept-encoding': 'gzip',
-                  },
-              })
-            : await twitterGot(`${baseUrl}${id.startsWith('+') ? gqlMap.UserByRestId : gqlMap.UserByScreenName}`, params, {
-                  allowNoAuth: !id.startsWith('+'),
-              });
-
-        // HTTP 200 can still contain GraphQL errors; never cache those responses.
-        getUserResult(response);
-        return response;
-    });
+            // HTTP 200 can still contain GraphQL errors; never cache those responses.
+            getUserResult(response);
+            return response;
+        },
+        TWITTER_USER_CACHE_EXPIRE
+    );
     return getUserResult(data);
 };
 
@@ -83,25 +89,29 @@ const cacheTryGet = async (_id, params, operationName, func) => {
 };
 
 const getUserTweets = (id: string, params?: ApiParams) =>
-    cacheTryGet(id, params, 'getUserTweets', async (id, params = {}) =>
-        gatherLegacyFromData(
+    cacheTryGet(id, params, 'getUserTweets', async (id, params: ApiParams = {}) => {
+        const tweets = gatherLegacyFromData(
             await paginationTweets('UserTweets', id, {
                 ...params,
-                count: 20,
+                count: params.count ?? 20,
                 includePromotedContent: true,
                 withQuickPromoteEligibilityTweetFields: true,
                 withVoice: true,
                 withV2Timeline: true,
-            })
-        )
-    );
+            }),
+            ['profile-conversation-'],
+            id
+        );
+        // Keep only root posts; drop replies and self-thread continuations from profile-conversation modules
+        return tweets.filter((t) => !t.in_reply_to_status_id_str);
+    });
 
 const getUserTweetsAndReplies = (id: string, params?: ApiParams) =>
-    cacheTryGet(id, params, 'getUserTweetsAndReplies', async (id, params = {}) =>
+    cacheTryGet(id, params, 'getUserTweetsAndReplies', async (id, params: ApiParams = {}) =>
         gatherLegacyFromData(
             await paginationTweets('UserTweetsAndReplies', id, {
                 ...params,
-                count: 20,
+                count: params.count ?? 20,
                 includePromotedContent: true,
                 withCommunity: true,
                 withVoice: true,

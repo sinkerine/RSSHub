@@ -8,7 +8,7 @@ import { parseDate } from '@/utils/parse-date';
 export const route: Route = {
     path: '/user/sheets/:username/:iso?/:freeOnly?',
     categories: ['shopping'],
-    example: '/mymusicsheet/user/sheets/HalcyonMusic/USD/1',
+    example: '/mymusicsheet/user/sheets/HalcyonMusic/USD',
     parameters: {
         username: 'Username, can be found in the URL',
         iso: 'ISO 4217 currency code for displaying prices, defaults to `USD`',
@@ -227,18 +227,7 @@ const MymusicSheetDescription = ({
     };
 }) => (
     <div class="item-description">
-        {youtubeId ? (
-            <iframe
-                id="ytplayer"
-                type="text/html"
-                width="640"
-                height="360"
-                src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=0`}
-                frameborder="0"
-                allowfullscreen
-                referrerpolicy="strict-origin-when-cross-origin"
-            ></iframe>
-        ) : null}
+        {youtubeId ? <iframe id="ytplayer" type="text/html" width="640" height="360" src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=0`} frameborder="0" allowfullscreen></iframe> : null}
         {content.musicName ? <p>Music Name: {content.musicName}</p> : null}
         {content.musicMemo ? <p>Music Memo: {content.musicMemo}</p> : null}
         {content.musicianName ? <p>Musician Name: {content.musicianName}</p> : null}

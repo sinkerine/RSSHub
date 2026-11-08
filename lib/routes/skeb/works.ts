@@ -30,7 +30,7 @@ export const route: Route = {
         nsfw: true,
     },
     name: 'Creator Works',
-    maintainers: ['SnowAgar25'],
+    maintainers: ['Tsuyumi25'],
     handler,
     radar: [
         {
@@ -97,7 +97,7 @@ async function ensureRequestKey(url: string) {
             const newRequestKey = String(error.data).match(/request_key=(.*?);/)?.[1];
             if (newRequestKey) {
                 cache.set('skeb:request_key', newRequestKey);
-                logger.debug(`Retrieved new request_key: ${newRequestKey}`);
+                logger.debug('Retrieved a new request key');
             } else {
                 logger.error('Failed to extract request_key from error response');
             }

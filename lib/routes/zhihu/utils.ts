@@ -16,8 +16,6 @@ export const header = {
     'x-api-version': '3.0.91',
 };
 
-const fixImageUrl = (url: string) => url.split('?', 1)[0].replace('_b.jpg', '.jpg').replace('_r.jpg', '.jpg').replace('_720w.jpg', '.jpg');
-
 export const processImage = (content: string) => {
     const $ = load(content, null, false);
 
@@ -25,35 +23,37 @@ export const processImage = (content: string) => {
 
     $('a').each((_, elem) => {
         const href = $(elem).attr('href');
-        if (href?.startsWith('http://link.zhihu.com/?target=') || href?.startsWith('https://link.zhihu.com/?target=')) {
-            const url = new URL(href);
-            const target = url.searchParams.get('target') || '';
-            try {
-                $(elem).attr('href', decodeURIComponent(target));
-            } catch {
-                // sometimes the target is not a valid url
-            }
+        if (!href?.startsWith('http://link.zhihu.com/?target=') && !href?.startsWith('https://link.zhihu.com/?target=')) {
+            return;
+        }
+
+        const url = new URL(href);
+        const target = url.searchParams.get('target') || '';
+        try {
+            $(elem).attr('href', decodeURIComponent(target));
+        } catch {
+            // sometimes the target is not a valid url
         }
     });
 
     $('img.content_image, img.origin_image, img.content-image, img.data-actualsrc, figure>img').each((i, e) => {
         if (e.attribs['data-actualsrc']) {
             $(e).attr({
-                src: fixImageUrl(e.attribs['data-actualsrc']),
+                src: e.attribs['data-actualsrc'],
                 width: null,
                 height: null,
             });
             $(e).removeAttr('data-actualsrc');
         } else if (e.attribs['data-original']) {
             $(e).attr({
-                src: fixImageUrl(e.attribs['data-original']),
+                src: e.attribs['data-original'],
                 width: null,
                 height: null,
             });
             $(e).removeAttr('data-original');
         } else {
             $(e).attr({
-                src: fixImageUrl(e.attribs.src),
+                src: e.attribs.src,
                 width: null,
                 height: null,
             });
@@ -70,8 +70,6 @@ const getCookieValueFrom = (cookieStr: string | undefined, key: string) =>
         .find((e) => e.startsWith(key + '='))
         ?.slice(key.length + 1) || '';
 
-export const getCookieValueByKey = (key: string) => getCookieValueFrom(config.zhihu.cookies, key);
-
 export type ZhihuClient = {
     get<T = any>(apiPath: string): Promise<T>;
     getPage(): Promise<string>;
@@ -80,14 +78,15 @@ export type ZhihuClient = {
 let isUnreachableRuntimeErrorGuarded = false;
 const pendingZseCredentials = new Map<string, Promise<{ dc0: string; zseCk: string; ua: string }>>();
 
+const hasNameAndMessage = (reason: unknown): reason is { name: unknown; message: unknown } => typeof reason === 'object' && reason !== null && 'name' in reason && 'message' in reason;
+
 const preventUnreachableRuntimeError = () => {
     if (isUnreachableRuntimeErrorGuarded) {
         return;
     }
     isUnreachableRuntimeErrorGuarded = true;
     process.on('unhandledRejection', (reason) => {
-        const error = reason as { name?: string; message?: string } | undefined;
-        if (error?.name === 'RuntimeError' && error.message === 'unreachable') {
+        if (hasNameAndMessage(reason) && reason.name === 'RuntimeError' && reason.message === 'unreachable') {
             return;
         }
         throw reason;
@@ -140,20 +139,19 @@ const generateZseCk = async (url: string, apiPath: string, configuredDc0: string
         headers,
         parseResponse: (text) => text,
     });
-    const dom = new JSDOM(`<!doctype html><html><head><meta id="zh-zse-ck" content="${meta}"><script data-assets-tracker-config='{"appName":"zse_ck"}'></script></head><body></body></html>`, {
+    const { window } = new JSDOM(`<!doctype html><html><head><meta id="zh-zse-ck" content="${meta}"><script data-assets-tracker-config='{"appName":"zse_ck"}'></script></head><body></body></html>`, {
         url,
         referrer: 'https://www.zhihu.com/',
         runScripts: 'outside-only',
         pretendToBeVisual: true,
         virtualConsole: new VirtualConsole(),
     });
-    const { window } = dom;
     Object.defineProperties(window.navigator, {
         userAgent: { value: ua, configurable: true },
         webdriver: { value: false, configurable: true },
     });
     window.TextEncoder = TextEncoder;
-    window.TextDecoder = TextDecoder as typeof window.TextDecoder;
+    window.TextDecoder = TextDecoder;
     window.atob = (value: string) => Buffer.from(value, 'base64').toString('binary');
     window.btoa = (value: string) => Buffer.from(value, 'binary').toString('base64');
     Object.assign(window, { __g: {} });
