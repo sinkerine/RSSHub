@@ -8,6 +8,7 @@ import { parseHostRateLimits } from '@/utils/host-rate-limit';
 type ConfigEnvKeys =
     // MCP endpoint
     | 'MCP_ENABLE'
+    | 'MCP_TOOLS'
     | 'MCP_ROUTES'
     | 'MCP_MAX_CONCURRENCY'
     | 'MCP_MAX_QUEUE'
@@ -284,25 +285,13 @@ export type ConfigEnv = Partial<Record<ConfigEnvKeys, string | undefined>>;
 
 let envs: ConfigEnv = process.env;
 
-export const DEFAULT_MCP_ROUTES: readonly string[] = [
-    '/twitter/user/:id/:routeParams?',
-    '/twitter/keyword/:keyword/:routeParams?',
-    '/twitter/list/:id/:routeParams?',
-    '/twitter/media/:id/:routeParams?',
-    '/twitter/tweet/:id/status/:status/:original?',
-    '/twitter/home/:routeParams?',
-    '/twitter/home_latest/:routeParams?',
-    '/twitter/likes/:id/:routeParams?',
-];
-
 export type Config = {
     mcp: {
         enable: boolean;
-        routes: string[];
+        tools: string[];
         maxConcurrency: number;
         maxQueue: number;
         timeout: number;
-        maxItems: number;
         maxResponseBytes: number;
         allowedOrigins: string[];
     };
@@ -830,9 +819,9 @@ const getAssetsUrl = (rootUrl: string, assetsUrl?: string) => {
     return url.href.replace(/\/+$/, '');
 };
 
-const mcpInteger = (value: string | undefined, fallback: number, minimum: number, maximum = Number.MAX_SAFE_INTEGER) => {
+const mcpInteger = (value: string | undefined, fallback: number, minimum: number) => {
     const parsed = value === undefined || value.trim() === '' ? NaN : Number(value);
-    return Number.isSafeInteger(parsed) && parsed >= minimum ? Math.min(parsed, maximum) : fallback;
+    return Number.isSafeInteger(parsed) && parsed >= minimum ? parsed : fallback;
 };
 const mcpList = (value: string) =>
     value
@@ -869,12 +858,11 @@ const calculateValue = () => {
     const _value = {
         mcp: {
             enable: toBoolean(envs.MCP_ENABLE, false),
-            routes: envs.MCP_ROUTES === undefined ? [...DEFAULT_MCP_ROUTES] : mcpList(envs.MCP_ROUTES),
+            tools: envs.MCP_TOOLS === undefined ? ['twitter_search', 'twitter_user_tweets', 'twitter_get_tweet'] : mcpList(envs.MCP_TOOLS),
             maxConcurrency: mcpInteger(envs.MCP_MAX_CONCURRENCY, 1, 1),
             maxQueue: mcpInteger(envs.MCP_MAX_QUEUE, 4, 0),
             timeout: mcpInteger(envs.MCP_TIMEOUT, 50, 1),
-            maxItems: mcpInteger(envs.MCP_MAX_ITEMS, 20, 1, 100),
-            maxResponseBytes: mcpInteger(envs.MCP_MAX_RESPONSE_BYTES, 262144, 4096),
+            maxResponseBytes: mcpInteger(envs.MCP_MAX_RESPONSE_BYTES, 262144, 65536),
             allowedOrigins: mcpList(envs.MCP_ALLOWED_ORIGINS ?? ''),
         },
         // app config

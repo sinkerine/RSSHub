@@ -2,7 +2,6 @@ import type { MiddlewareHandler } from 'hono';
 
 import { config } from '@/config';
 import RejectError from '@/errors/types/reject';
-import { getInternalRequestState } from '@/utils/internal-request';
 import { consumeWeiboOAuthState, hasValidAccessCredential } from '@/utils/weibo-oauth';
 
 const reject = (requestPath) => {
@@ -10,10 +9,6 @@ const reject = (requestPath) => {
 };
 
 const middleware: MiddlewareHandler = async (ctx, next) => {
-    if (getInternalRequestState(ctx)) {
-        await next();
-        return;
-    }
     const requestPath = new URL(ctx.req.url).pathname;
 
     if (['/', '/robots.txt', '/favicon.ico', '/logo.png'].includes(requestPath)) {

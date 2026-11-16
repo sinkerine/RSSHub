@@ -1,178 +1,234 @@
-# RSSHub MCP endpoint
+# Twitter MCP endpoint
 
-RSSHub can expose read-only feed discovery and fetching through an MCP Streamable HTTP endpoint at exactly `/mcp`. Enable it on a Node server with `MCP_ENABLE=true`. The feature is disabled by default. It uses the existing RSSHub feed pipeline, cache, route credentials and parameter processing; it does not add a browser or a second Twitter transport.
+Set `MCP_ENABLE=true` to expose the Model Context Protocol endpoint at `/mcp` on the Node or Vercel server. It registers three direct Twitter tools: `twitter_search`, `twitter_user_tweets`, and `twitter_get_tweet`. The generic `search_routes` and `fetch_feed` tools have been removed; calling them returns the SDK unknown-tool error. The unrelated `/mcp/feed/:type?` RSS route is unchanged.
 
-**The MCP endpoint has no authentication. `ACCESS_KEY` does not protect `/mcp`. Anyone who can reach it can read every allowlisted feed, including the configured Twitter account’s home timeline and likes.** Restrict access using a private network, VPN or an authenticating reverse proxy, and use HTTPS. Any credentials required by a proxy belong to that proxy. RSSHub ignores `Authorization` and `key`/`code`/`token` query parameters on `/mcp`.
+**There is no MCP authentication.** `ACCESS_KEY` still protects ordinary RSS feeds but does not gate `/mcp`; keys and Authorization headers do not authenticate MCP requests. Restrict access at the network or reverse proxy before enabling this endpoint. An unlisted `Origin` receives HTTP 403 before the SDK runs; requests without Origin are accepted. This Origin check is not authentication. Startup logs the unauthenticated warning.
 
-Requests with an `Origin` header must exactly match `MCP_ALLOWED_ORIGINS`; the default accepts no browser origins. Requests without `Origin`, as typically sent by agents, are accepted. An unlisted Origin receives HTTP 403 with `{"error":"forbidden_origin"}` before MCP processing. This check is not authentication.
+The endpoint supports legacy stateless SSE (2025 protocol) and modern JSON (`2026-07-28`). GET and DELETE return 405; the request body limit is 65536 bytes. With MCP disabled, the endpoint is never imported and `/mcp` retains its not-found behavior. Cloudflare Workers do not include the MCP endpoint.
 
-The endpoint runs in the Node development and production server, including `dist/index.mjs` used by the Nix package. The Vercel entry mounts the same app and is build checked; no deployment is performed. The Cloudflare Worker does not expose MCP. A container worker proxies the Node server inside its container, so that Node process can expose MCP. Package mode mounts MCP only if explicitly enabled. Existing `/mcp/feed/:type?` feeds remain separate.
+Every call reads one upstream page directly through the existing Twitter adapters. It does not use RSS rendering, route caches, in-progress claims, adapter result caches or the developer timeline snapshot. Identical calls make fresh upstream reads. User lookup, cookies, query-ID resolution, credential selection and token rotation remain shared with RSS. Ordinary Twitter RSS/Atom/JSON, `/api/*` and their caching behavior are unchanged.
+
+Backend selection is unchanged: `TWITTER_THIRD_PARTY_API` or `TWITTER_AUTH_TOKEN` selects the web adapter; otherwise `TWITTER_CONSUMER_KEY` plus `TWITTER_CONSUMER_SECRET` selects the developer adapter. Search and user timelines support the third-party source. Tweet detail requires an auth token or developer credentials: the third-party API does not support TweetDetail. Availability and accepted search operators depend on X and the configured backend; no live-X availability is promised. Developer API search covers the last seven days, and each fresh page can incur API billing.
+
+All three tools declare strict input and output schemas and `annotations: { readOnlyHint: true, openWorldHint: true }`.
+
+## Inputs
+
+```ts
+// twitter_search
+{
+  query: string;   // 1–512 chars, passed verbatim to X
+  limit?: number;  // int 1–20, default 20
+  cursor?: string; // ^v1\.[A-Za-z0-9_-]+$, ≤ 4096 chars; a nextCursor from an earlier call with the same query
+}
+
+// twitter_user_tweets
+{
+  user: string;              // ^@?[A-Za-z0-9_]{1,15}$  or  ^\+[0-9]{1,20}$
+  includeReplies?: boolean;  // default false
+  includeRetweets?: boolean; // default true
+  limit?: number;            // int 1–20, default 20
+  cursor?: string;           // same format; bound to the same user + includeReplies
+}
+
+// twitter_get_tweet
+{
+  user: string;    // same pattern as above (the author)
+  tweetId: string; // ^[0-9]{1,20}$
+  limit?: number;  // int 1–20, default 20 — bounds `thread`
+}
+```
+
+Unknown properties are rejected (`additionalProperties: false`, via a strict zod object).
+
+## Tools and parameter descriptions
+
+**`twitter_search`** — title "Search X posts"
+
+> Search recent X (Twitter) posts, newest first, through RSSHub's configured Twitter backend. `query` is sent verbatim to X search; it is not URL-encoded or rewritten. Returns up to `limit` posts from one upstream page. To get older posts, pass the result's `nextCursor` as `cursor` with the same `query`. A missing `nextCursor` means there are no more results. Every call is a fresh read. Requires RSSHub Twitter credentials: TWITTER_AUTH_TOKEN, TWITTER_THIRD_PARTY_API, or TWITTER_CONSUMER_KEY + TWITTER_CONSUMER_SECRET (developer API, last 7 days only).
+
+`query` description:
+
+> X search expression (1–512 characters), using the same syntax as the x.com search box. Examples: `RSSHub`, `from:DIYgod RSSHub`, `"exact phrase"`, `rsshub OR miniflux`, `rsshub -bot`, `lang:en rsshub`. X interprets the operators; RSSHub does not validate them. Operator support depends on X and on the configured backend.
+
+`cursor` description:
+
+> Opaque `nextCursor` from an earlier `twitter_search` result with the same `query`. Omit it to get the newest posts. `limit` may differ between pages.
+
+**`twitter_user_tweets`** — title "Get an X user's posts"
+
+> Get recent posts from one X user's profile timeline (up to `limit` from one upstream page), plus the user's profile. The pinned post may appear first on the first page and is flagged `isPinned`. To get older posts, pass the result's `nextCursor` as `cursor` with the same `user` and `includeReplies`. A missing `nextCursor` means there are no more results. Every call is a fresh read. Requires TWITTER_AUTH_TOKEN, TWITTER_THIRD_PARTY_API, or TWITTER_CONSUMER_KEY + TWITTER_CONSUMER_SECRET.
+
+- `user`: "X handle without @ (e.g. `DIYgod`; a leading @ is removed), or `+` followed by the numeric user ID (e.g. `+44196397`)."
+- `includeReplies`: "Include the user's replies (X's 'Posts & replies' timeline). Default false returns only root posts."
+- `includeRetweets`: "Include reposts. Default true. The filter is applied after fetching the single upstream page, so fewer than `limit` posts may be returned."
+- `limit`: "Maximum posts to return, 1–20. Default 20."
+- `cursor`: "Opaque `nextCursor` from an earlier `twitter_user_tweets` result with the same `user` and `includeReplies`. Omit it to get the newest posts. `limit` and `includeRetweets` may differ between pages."
+
+**`twitter_get_tweet`** — title "Get an X post"
+
+> Get one X post by author handle and post ID, plus the conversation posts X returns with it (ancestors and replies from a single page; none on the developer-API backend). Every call is a fresh read. Requires TWITTER_AUTH_TOKEN (web backend) or TWITTER_CONSUMER_KEY + TWITTER_CONSUMER_SECRET. TWITTER_THIRD_PARTY_API alone is not enough.
+
+- `user`: "Author handle without @ or `+numericId`, taken from `x.com/<user>/status/<tweetId>`."
+- `tweetId`: "Numeric post ID from `x.com/<user>/status/<tweetId>`."
+- `limit`: "Maximum conversation posts in `thread`, 1–20. Default 20. The requested post is always returned."
+
+## Outputs
+
+```ts
+type Author = { id?: string; username?: string; name?: string };
+
+type Media = {
+    type: 'photo' | 'video' | 'animated_gif';
+    url: string; // photo: media_url_https; video/gif: highest-bitrate video/mp4 variant
+    previewUrl?: string; // video/gif poster (media_url_https)
+    width?: number;
+    height?: number;
+};
+
+type QuotedTweet = {
+    id: string;
+    url: string;
+    text: string;
+    textTruncated: boolean;
+    createdAt?: string;
+    author?: Author;
+    media: Media[];
+    links: string[];
+};
+
+type Tweet = {
+    id: string; // for reposts: the ORIGINAL post's id
+    url: string; // https://x.com/<username>/status/<id> (https://x.com/i/status/<id> if no username)
+    text: string; // t.co links expanded, media t.co links removed, &amp;/&lt;/&gt; decoded; ≤ 4000 UTF-16 units
+    textTruncated: boolean;
+    createdAt?: string; // ISO 8601; omitted if missing or invalid
+    author?: Author; // original author (for reposts: not the reposter)
+    lang?: string;
+    isRetweet: boolean;
+    isReply: boolean;
+    isQuote: boolean;
+    isPinned?: boolean; // twitter_user_tweets only
+    retweetedBy?: Author; // present when isRetweet
+    replyTo?: { tweetId: string; username?: string };
+    quoted?: QuotedTweet; // one level; absent if X withheld it even when isQuote
+    media: Media[];
+    links: string[]; // expanded URLs, de-duplicated, upstream order
+    hashtags: string[];
+    mentions: string[]; // usernames
+    metrics: { likes?: number; retweets?: number; replies?: number; quotes?: number };
+};
+
+type Common = {
+    returnedCount: number; // length of tweets / thread
+    sourceCount: number; // posts in the fetched upstream page before MCP resume/filters/limit
+    truncated: { items: boolean; bytes: boolean; text: boolean };
+    fetchedAt: string; // ISO completion time of this fresh read
+    link: string; // human-readable x.com page
+};
+type Paged = { pagination: 'cursor'; nextCursor?: string }; // absent nextCursor = end of results
+
+// twitter_search
+type SearchOutput = Common & Paged & { query: string; tweets: Tweet[] };
+// twitter_user_tweets
+type UserTweetsOutput = Common &
+    Paged & {
+        user: { id: string; username: string; name?: string; description?: string; profileImageUrl?: string; url: string };
+        tweets: Tweet[];
+    };
+// twitter_get_tweet
+type GetTweetOutput = Common & { pagination: 'none'; tweet: Tweet; thread: Tweet[] };
+```
+
+Rules:
+
+- Field sources by backend. `metrics.likes` comes from both backends. `retweets`, `replies`, `quotes` and `lang` are web-only, so they are optional. View counts are not exposed because the adapters do not carry them into legacy objects.
+- Objects are built **field by field** from the adapter's legacy tweet objects. Raw adapter objects are never serialized; this is the structural protection for the success path (the error redaction rules below).
+- Order is upstream order. `truncated.items` means `limit` or filters removed posts. `truncated.text` means any text was clipped. `truncated.bytes` means trailing posts (or `thread` entries) were dropped to fit `MCP_MAX_RESPONSE_BYTES`. The `twitter_get_tweet` focal `tweet` is never dropped.
+- An empty `tweets` array is a successful result (e.g. no search matches). There is no "empty feed" error in this API. A page can be empty and still carry a `nextCursor`, for example when `includeRetweets=false` filters out a page made entirely of reposts. Only a missing `nextCursor` signals the end.
+
+## Cursor paging
+
+Search and user timelines page with `nextCursor`; there is no offset, larger per-call maximum or automatic multi-page fetch. Pass `nextCursor` as `cursor` on the next call with the same query, or the same user and `includeReplies`. Limit and includeRetweets may change. `twitter_get_tweet` has no cursor input and returns the conversation's first page only; the developer backend returns no thread.
+
+A token is `v1.` plus base64url JSON: `{ t, b, k, c?, a? }`. `t` is the paged tool, `b` the web/developer backend, `k` the first 16 hex characters of SHA-256 over canonical upstream arguments, `c` the upstream cursor, and `a` a numeric upstream entry ID to resume after within that page. Handle binding strips @ and lowercases the handle; the search string remains byte-identical. Reposts resume by their original timeline entry ID, even though normalized output describes the reposted post.
+
+The server resumes after `a` when it is present on the freshly fetched page, then filters reposts and applies limit and response-byte bounds. If posts remain, the next cursor resumes after the last returned entry within that same upstream page. Otherwise it advances to X's Bottom cursor (including TimelineReplaceEntry) or developer next_token. An empty upstream page, absent Bottom cursor or repeated upstream cursor ends paging. An empty result after repost filtering can still have a next cursor; only an absent nextCursor signals the end. Pages can shift between requests, and clients should de-duplicate by post ID. When `a` is absent from a shifted page, processing resumes from the page start.
+
+**Tokens are unsigned and have no expiry or secret.** Validation has three classes:
+
+1. Pattern/length violations are SDK input errors (text only).
+2. Undecodable JSON, unknown fields, invalid version/shape/types or a wrong tool/backend/argument hash return `invalid_cursor` before taking a limiter slot or calling X.
+3. A well-formed token with an edited `c` or `a`, while keeping its binding, is indistinguishable from a genuine token. Edited `c` is forwarded to X; the response can be a page, an empty result or an upstream error. Edited `a` absent from the page resumes from its start. This does not provide tamper detection or a cryptographic security boundary.
+
+## Errors and execution limits
+
+Tool failures return `isError: true`, `structuredContent: { error: { code, message, retryable, retryAfterSeconds?, phase? } }`, and an identical JSON text block. SDK input-schema rejection happens before the callback and returns `Input validation error` text without structuredContent. Removed tools return the SDK unknown-tool error.
+
+| Code                  | Retryable | Meaning                                                                     |
+| --------------------- | --------- | --------------------------------------------------------------------------- |
+| invalid_parameter     | no        | Invalid or unavailable Twitter user/parameter                               |
+| not_found             | no        | Requested focal post absent from detail response                            |
+| invalid_cursor        | no        | Malformed cursor or mismatched tool/backend/arguments; retry without cursor |
+| source_config_missing | no        | No configured backend, or third-party-only TweetDetail                      |
+| upstream_rate_limited | yes       | Upstream 429; retryAfterSeconds is included when Retry-After is available   |
+| upstream_error        | yes       | Other source or HTTP failure                                                |
+| capacity_exceeded     | yes       | Per-process limiter and queue are full                                      |
+| timeout               | yes       | Deadline exceeded, with phase `queued` or `running`                         |
+| internal_error        | no        | Internal processing or response-bound failure                               |
+
+Errors redact credential-named config strings of six or more characters and URL userinfo, query and fragment, then clip messages to 300 UTF-16 units. Successes are built field by field from the public output schema. Tweet text and public links are not URL-redacted, so legitimate query strings remain intact. No raw user, legacy, cookie, token or transport objects are exposed.
+
+Cursor validation runs before admission. A single per-process FIFO limiter and deadline bound each call. Cancelled or timed-out queued calls never reach the source. A running call keeps its limiter slot until the adapter settles, even after timeout or HTTP cancellation, because the shared adapters cannot abort transport. Late completion writes no result cache. Response byte bounds drop trailing posts/thread entries and set truncated.bytes; the focal post is always retained. Paging resumes after the last retained entry when response bounds reduce a page.
+
+The existing `twitter:lock-token1:*` token lock is a **best-effort lease**, with a non-atomic cache get/set, no owner, and an expiry that can be extended after rate limiting. It does not guarantee strict account serialization across RSS and MCP, processes or replicas. The MCP limiter bounds MCP work within one process only.
 
 ## Configuration
 
-Comma lists are trimmed and empty entries removed. Invalid integers, fractional values and values below the minimum use the default. `MCP_MAX_ITEMS` is capped at 100.
+| Variable               | Default         | Behavior                                                                                                                                |
+| ---------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| MCP_ENABLE             | false           | Enables `/mcp` without authentication                                                                                                   |
+| MCP_TOOLS              | all three tools | Comma-separated, trimmed tool names. An explicitly empty value registers none. Unknown names warn once each at startup and are ignored. |
+| MCP_ROUTES             | removed         | Ignored; startup warning points to MCP_TOOLS                                                                                            |
+| MCP_MAX_ITEMS          | removed         | Ignored; startup warning. Per-call limit is fixed at 1–20, default 20.                                                                  |
+| MCP_MAX_CONCURRENCY    | 1               | Positive per-process active call bound                                                                                                  |
+| MCP_MAX_QUEUE          | 4               | Nonnegative FIFO queue bound                                                                                                            |
+| MCP_TIMEOUT            | 50 seconds      | Positive queued and running deadline                                                                                                    |
+| MCP_MAX_RESPONSE_BYTES | 262144          | Minimum 65536; smaller or invalid values use the default                                                                                |
+| MCP_ALLOWED_ORIGINS    | empty           | Comma-separated exact Origins allowed in addition to requests without Origin                                                            |
 
-| Variable                 | Default                      | Bounds / meaning                                                  |
-| ------------------------ | ---------------------------- | ----------------------------------------------------------------- |
-| `MCP_ENABLE`             | `false`                      | Boolean; opt in to unauthenticated `/mcp`                         |
-| `MCP_ROUTES`             | Eight Twitter patterns below | Comma-separated full registered route patterns; empty allows none |
-| `MCP_MAX_CONCURRENCY`    | `1`                          | Integer ≥ 1; running MCP feed calls per process                   |
-| `MCP_MAX_QUEUE`          | `4`                          | Integer ≥ 0; waiting MCP feed calls per process                   |
-| `MCP_TIMEOUT`            | `50`                         | Integer ≥ 1; seconds, queue and execution combined                |
-| `MCP_MAX_ITEMS`          | `20`                         | Integer 1–100; output item cap                                    |
-| `MCP_MAX_RESPONSE_BYTES` | `262144`                     | Integer ≥ 4096; UTF-8 bytes of success structured content         |
-| `MCP_ALLOWED_ORIGINS`    | empty                        | Comma-separated exact Origins, e.g. `https://agent.example`       |
+Enabling MCP without a Twitter backend logs a startup warning. Tools stay registered and return source_config_missing. Enabling an obsolete route/item config logs a migration warning so a former path restriction cannot silently be mistaken for the new tool catalog.
 
-Default route patterns, in configuration order:
-
-```text
-/twitter/user/:id/:routeParams?
-/twitter/keyword/:keyword/:routeParams?
-/twitter/list/:id/:routeParams?
-/twitter/media/:id/:routeParams?
-/twitter/tweet/:id/status/:status/:original?
-/twitter/home/:routeParams?
-/twitter/home_latest/:routeParams?
-/twitter/likes/:id/:routeParams?
-```
-
-Patterns must resolve in the live registry. Unresolved entries are excluded with one startup-discovery warning each. Discovery loads only the top-level directories needed by the allowlist in development. Fetching uses RSSHub’s first matching registered feed route; a broad allowed parameter pattern cannot bypass a more specific excluded route. `/mcp`, `/api/*`, `/healthz`, `/metrics`, `/robots.txt` and `/` cannot be fetched.
-
-## Tools
-
-The server supports the legacy 2025 initialization handshake and the per-request `2026-07-28` protocol, using the official `@modelcontextprotocol/server@2.4.0` SDK. Modern exchanges use JSON responses; the SDK’s stateless legacy transport uses SSE, so reverse proxies must support SSE for legacy clients. Both tools declare input and output schemas and `readOnlyHint: true`. GET and DELETE `/mcp` return 405. POST bodies are limited to 65536 bytes. There is no persistent MCP session state.
-
-`search_routes` accepts:
-
-```ts
-{ query?: string; limit?: number; offset?: number }
-```
-
-`query` is at most 200 characters; `limit` is an integer 1–50 (default 10); `offset` is an integer ≥ 0 (default 0). Nonempty queries use RSSHub’s catalog ranking. Empty queries list all resolved allowed routes sorted by path. Results have `{ routes, total, nextOffset? }`, with `nextOffset` only if more entries remain. Each route is:
-
-```ts
-{
-  path: string; namespace: string; namespaceName: string; name: string;
-  example?: string; description?: string; // description ≤ 500 characters
-  parameters: Array<{
-    name: string; optional: boolean; description?: string;
-    default?: string; options?: string[];
-  }>;
-  requiresConfig: Array<{ name: string; optional: boolean }>;
-}
-```
-
-Configuration names are metadata; their values are never included. Build a concrete path from a returned pattern and its parameters.
-
-`fetch_feed` accepts:
-
-```ts
-{ path: string; limit?: number; content?: 'text' | 'html' | 'none' }
-```
-
-`path` must start with `/`, contain 1–2048 characters and resolve to an allowed route. Queries, fragments, whitespace, double slashes, backslashes and normalized dot segments (including `%2e`) are rejected. `limit` is an integer 1–`MCP_MAX_ITEMS`, default `min(20, MCP_MAX_ITEMS)`. `content` defaults to `text`: RSSHub’s HTML-to-text conversion. `html` returns processed HTML and `none` omits content. The result is:
-
-```ts
-{
-  route: { path: string; namespace: string; name: string };
-  requestPath: string;
-  feed: {
-    title: string; link?: string; description?: string;
-    image?: string; language?: string; author?: string;
-  };
-  items: Array<{
-    title?: string; link?: string; guid?: string;
-    pubDate?: string; updated?: string; // ISO dates, absent when invalid/missing
-    author?: string; categories?: string[];
-    content?: string; contentFormat: 'text' | 'html' | 'none';
-    contentTruncated: boolean;
-    image?: string; enclosure?: { url: string; type?: string; length?: number };
-  }>;
-  itemCount: number; returnedCount: number;
-  truncation: { items: boolean; content: boolean; bytes: boolean };
-  snapshot: {
-    cache: 'hit' | 'miss' | 'disabled'; builtAt: string;
-    ttlMinutes: number; pagination: 'none';
-  };
-}
-```
-
-`itemCount` is the processed snapshot’s item count before MCP limits. `truncation.items` reports clipping by the requested item limit. Item content is at most 4000 characters; `contentTruncated` and aggregate `truncation.content` report clipping. HTML can end mid-markup. Trailing items are dropped until the structured result fits the byte bound, with `truncation.bytes: true`. If metadata alone exceeds the bound, fetching fails explicitly with `internal_error`. Input rejected by the advertised schema (including empty or overlong paths and invalid limits) produces SDK `Input validation error` text tool errors before dispatch. These SDK errors have `isError: true` and no structured error code. Paths within the schema bounds that fail syntax checks return the structured `invalid_arguments` error below.
-
-Tool-produced successes and runtime errors have `structuredContent` and a text content block containing the identical JSON. SDK input-validation errors are excluded: they return `isError: true` with text only. The whole MCP response is approximately twice the configured structured-content byte bound, plus JSON escaping and protocol overhead. Feed pagination is always `none`; there is no feed cursor or next-page field. Discovery pagination is independent.
-
-`snapshot.builtAt` is the RSSHub pipeline snapshot build time (`lastBuildDate`), preserved on cache hits. With caching disabled it is MCP completion time. It is **not an upstream fetch time**: route-level detail caches may contain older source data. The dispatcher forwards a bare path, without `format`, `limit`, `sorted` or filter queries, so it shares the default RSS reader’s feed-cache key. MCP limits are applied after the feed pipeline.
-
-## Errors
-
-Tool-produced runtime errors have `isError: true` and matching text/structured JSON as shown below. SDK input-validation errors return `isError: true` with `Input validation error` text, without this structured error object:
-
-```ts
-{ error: {
-  code: string; message: string; retryable: boolean;
-  retryAfterSeconds?: number; phase?: 'queued' | 'running';
-} }
-```
-
-| Code                    | Retryable | Meaning                                                     |
-| ----------------------- | --------- | ----------------------------------------------------------- |
-| `invalid_arguments`     | false     | Invalid feed path syntax                                    |
-| `route_not_allowed`     | false     | Excluded, recursive or non-feed path                        |
-| `route_not_found`       | false     | Route raised NotFoundError                                  |
-| `invalid_parameter`     | false     | Route rejected a parameter                                  |
-| `source_config_missing` | false     | Source credentials/configuration missing                    |
-| `access_denied`         | false     | Route raised RejectError                                    |
-| `captcha_required`      | false     | Source requires CAPTCHA                                     |
-| `upstream_rate_limited` | true      | Source returned 429, including Twitter’s error format       |
-| `upstream_error`        | true      | Other source failure                                        |
-| `request_in_progress`   | true      | Existing feed claim did not finish within its waiter budget |
-| `empty_result`          | false     | Empty route without `allowEmpty: true`                      |
-| `unsupported_result`    | false     | Redirect, raw Response or no item array                     |
-| `capacity_exceeded`     | true      | Running and waiting capacity full                           |
-| `timeout`               | true      | Queue/execution deadline; `phase` identifies which          |
-| `internal_error`        | false     | Internal MCP processing failure                             |
-
-`retryAfterSeconds` is included only when a rate-limit error exposes a valid `Retry-After` header (seconds or HTTP date). MCP never retries automatically. Messages use a fixed sentence plus at most 300 characters of safe detail. They omit stacks, URL userinfo and queries, and redact configured secrets of at least six characters under credential-related config names. Feed item content is source data and is not redacted; protect endpoint access accordingly. An empty success is returned only for a successful route explicitly allowing empty items.
-
-## Concurrency and deployment limits
-
-Admission is FIFO, bounded per process, with a single deadline covering queue wait and execution. Queue saturation fails immediately. Queued HTTP cancellation removes the queued task, so its route never runs. Cancellation or timeout of a running task returns to the caller but retains the concurrency slot until the feed pipeline settles; its result still populates the shared feed cache. A route that never settles retains its slot. Source HTTP requests have their own `REQUEST_TIMEOUT` and retry behavior.
-
-The limiter covers MCP only. It does not serialize external RSS requests, other processes, cluster workers or replicas. `ENABLE_CLUSTER` gives each worker its own limiter. Strict account serialization across RSS and MCP would require changes at the Twitter transport boundary, which this feature does not make. Same-key cache coordination is available with memory and Redis; memory coordinates only one process. Other cache backends may reuse snapshots without atomic request claims.
-
-The default routes require Twitter configuration (discover `requiresConfig` for details). The configured web transport uses X’s internal web API, which is not a supported third-party contract. X’s automation rules prohibit non-API automation; successful requests do not establish permission. See [X automation rules](https://help.x.com/en/rules-and-policies/x-automation) and the [official X API](https://docs.x.com/x-api). Only discovery and the real missing-configuration error are verified here for Twitter. No live Twitter/X request or authenticated pilot was performed. There are no write actions (post, reply, like or follow).
-
-The lockfile changes when installing the MCP SDK. Refresh the Nix package `pnpmDeps` hash in `flake.nix` before a Nix deployment. This feature does not deploy or change that hash.
-
-## Connecting and verification
-
-Add an HTTP MCP server at `https://<host>/mcp` in your agent’s MCP settings. Any proxy-level credentials are the operator’s responsibility. This work does not configure an agent product.
-
-A legacy initialization request, without RSSHub credentials:
-
-```sh
-curl https://rsshub.example/mcp \
-  -H 'Content-Type: application/json' \
-  -H 'Accept: application/json, text/event-stream' \
-  --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"example","version":"1"}}}'
-```
-
-Using the real SDK client (install `@modelcontextprotocol/client@2.4.0` in your client project):
+## Client example
 
 ```js
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 
-const client = new Client({ name: 'feed-reader', version: '1.0.0' });
-// To use the modern era, pass as the second Client argument:
-// { versionNegotiation: { mode: { pin: '2026-07-28' } } }
+const client = new Client({ name: 'x-reader', version: '1.0.0' });
+// For modern JSON: add { versionNegotiation: { mode: { pin: '2026-07-28' } } }.
 await client.connect(new StreamableHTTPClientTransport(new URL('https://rsshub.example/mcp')));
 try {
     console.log(await client.listTools());
-    console.log(await client.callTool({ name: 'search_routes', arguments: { query: 'twitter' } }));
-    console.log(await client.callTool({ name: 'fetch_feed', arguments: { path: '/twitter/user/_RSSHub', limit: 5 } }));
+    console.log(await client.callTool({ name: 'twitter_user_tweets', arguments: { user: 'DIYgod', includeRetweets: false, limit: 5 } }));
+    console.log(await client.callTool({ name: 'twitter_get_tweet', arguments: { user: 'DIYgod', tweetId: '1650844643997646852' } }));
+    let cursor;
+    for (let page = 0; page < 3; page++) {
+        const result = await client.callTool({ name: 'twitter_search', arguments: { query: 'from:DIYgod RSSHub', limit: 10, ...(cursor && { cursor }) } });
+        if (result.isError) throw new Error(result.content[0].text);
+        const output = result.structuredContent;
+        console.log(output.tweets);
+        cursor = output.nextCursor;
+        if (!cursor) break;
+    }
 } finally {
     await client.close();
 }
 ```
 
-Repository verification uses `node scripts/e2e/mcp.mjs` under `agent-job run --e2e mcp`, after separate setup and production-build jobs. Evidence is retained in `assets/build/e2e/mcp-run-*`. The journey uses loopback fixtures for successful feeds, output bounds, concurrency, timeouts, cache sharing, aborts, access controls and both protocol eras, plus the production Node bundle. `--skip-production` is for development diagnostics; it marks P1 unrun and cannot pass final acceptance. Redis integration runs with the unit suite and a local Redis service. Existing browser smoke remains a separate `browser` E2E check. No live site, HTTPS/proxy deployment or multiple-replica behavior is claimed by these checks.
+## Verification scope
+
+The synthetic dev/production E2E harness uses a loopback third-party GraphQL source and blocks external sockets. It exercises real MCP clients, adapter acquisition, normalization, freshness, paging, errors, lifecycle limits and unchanged protected RSS. Its feed comparisons use a fixed server wall clock and canonical request Host so generated RSS build timestamps and self-link origins can be compared byte for byte across isolated server ports. The capability mode separately establishes acquisition and discovery before product implementation. The full journey is run by an independent verifier; a prepared harness alone does not establish a passed journey.
+
+Real-entry integration tests cover successful TweetDetail through the actual web/developer adapters with only transport substituted, including focal/thread selection and missing focal behavior. Synthetic fixtures verify known Bottom cursor and TimelineReplaceEntry shapes, not live X behavior or whether a particular third-party proxy forwards cursors. No live X/Twitter, developer API service, Redis multi-process, HTTPS/proxy deployment, replica behavior or particular agent product is verified by this journey.
+
+Worker bundle checks distinguish this endpoint from pre-existing browser vendor code. The feature adds no `lib/mcp` or new MCP server/client/core code to the Worker. The pinned browser transport already bundles vendor `@modelcontextprotocol/sdk`/ajv through Patchright's utilsBundle; that existing vendor inclusion remains unchanged, so a broad package-name grep is not empty. The approved plan's execution clarification records this baseline limitation and preserves browser behavior.

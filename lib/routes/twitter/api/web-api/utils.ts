@@ -241,9 +241,10 @@ export const twitterGot = async (
     return responseData;
 };
 
-export const paginationTweets = async (endpoint: string, userId: number | undefined, variables: ApiParams, path?: string[]) => {
+export const fetchTimelinePage = async (endpoint: string, userId: number | string | undefined, variables: ApiParams, path?: string[]) => {
+    const { cursor, ...withoutCursor } = variables;
     const params = {
-        variables: JSON.stringify({ ...variables, userId }),
+        variables: JSON.stringify(cursor === undefined ? { ...variables, userId } : { ...withoutCursor, userId, cursor }),
         features: JSON.stringify(gqlFeatures[endpoint]),
     };
 
@@ -284,7 +285,7 @@ export const paginationTweets = async (endpoint: string, userId: number | undefi
     const data = await fetchData();
     const instructions = getInstructions(data);
     if (!instructions) {
-        return [];
+        return { entries: [] };
     }
 
     const moduleItems = instructions.find((i) => i.type === 'TimelineAddToModule')?.moduleItems;
@@ -292,8 +293,14 @@ export const paginationTweets = async (endpoint: string, userId: number | undefi
     const gridEntries = entries.find((i) => i.entryId === 'profile-grid-0')?.content?.items;
 
     const pinnedEntries = instructions.filter((instruction) => instruction.type === 'TimelinePinEntry' && instruction.entry).map((instruction) => instruction.entry);
-    return new Map([...pinnedEntries, ...(gridEntries || moduleItems || entries)].map((entry) => [entry.entryId, entry])).values().toArray();
+    const bottom = [...entries, ...instructions.filter((i) => i.type === 'TimelineReplaceEntry').map((i) => i.entry)].find((entry) => entry?.content?.cursorType === 'Bottom');
+    return {
+        entries: new Map([...pinnedEntries, ...(gridEntries || moduleItems || entries)].map((entry) => [entry.entryId, entry])).values().toArray(),
+        ...(typeof bottom?.content?.value === 'string' && bottom.content.value && { nextCursor: bottom.content.value }),
+    };
 };
+
+export const paginationTweets = async (endpoint: string, userId: number | string | undefined, variables: ApiParams, path?: string[]) => (await fetchTimelinePage(endpoint, userId, variables, path)).entries;
 
 const hydrateLegacyTweet = (legacy: any, tweet: any) => {
     legacy.user = normalizeUser(tweet.core?.user_result?.result || tweet.core?.user_results?.result);

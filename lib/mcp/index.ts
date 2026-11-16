@@ -3,40 +3,39 @@ import type { Handler } from 'hono';
 
 import type { Config } from '@/config';
 import { config } from '@/config';
-import { ensureNamespacesLoaded, namespaces } from '@/registry';
-import cache from '@/utils/cache';
-import type { InternalRequestEnv } from '@/utils/internal-request';
 import logger from '@/utils/logger';
 
-import { createAllowlistProvider } from './allowlist';
-import { createFeedDispatcher } from './dispatch';
 import { createRedactor } from './errors';
 import { createLimiter } from './limiter';
 import { checkOrigin } from './origin';
 import { buildMcpServer } from './server';
+import type { TwitterSource } from './twitter-source';
+import { createTwitterSource } from './twitter-source';
+import { toolNames } from './twitter-tools';
 
-export type AppFetch = (request: Request, env: InternalRequestEnv) => Response | Promise<Response>;
 export interface McpEndpointOptions {
-    fetch: AppFetch;
     mcpConfig?: Config['mcp'];
+    twitter?: TwitterSource;
 }
-
-export function createMcpEndpoint(options: McpEndpointOptions): Handler {
+export function createMcpEndpoint(options: McpEndpointOptions = {}): Handler {
     const mcpConfig = options.mcpConfig ?? config.mcp;
-    const allowlist = createAllowlistProvider({
-        patterns: mcpConfig.routes,
-        loadNamespaces: async () => {
-            await ensureNamespacesLoaded([...new Set(mcpConfig.routes.map((pattern) => pattern.split('/', 2)[1]).filter(Boolean))]);
-            return namespaces;
-        },
-    });
+    const configuredTools = new Set(mcpConfig.tools);
+    for (const name of configuredTools) {
+        if (!(toolNames as readonly string[]).includes(name)) {
+            logger.warn(`MCP: unknown tool ${name}; ignored`);
+        }
+    }
+    if (process.env.MCP_ROUTES !== undefined || process.env.MCP_MAX_ITEMS !== undefined) {
+        logger.warn('MCP_ROUTES and MCP_MAX_ITEMS are ignored; MCP_TOOLS controls tool exposure');
+    }
+    if (!config.twitter.thirdPartyApi && !config.twitter.authToken?.some(Boolean) && !(config.twitter.consumerKey && config.twitter.consumerSecret)) {
+        logger.warn('MCP Twitter backend is not configured; tools will return source_config_missing');
+    }
     const deps = {
         mcpConfig,
-        allowlist,
+        twitter: options.twitter ?? createTwitterSource(),
         limiter: createLimiter(mcpConfig),
-        dispatcher: createFeedDispatcher(options.fetch),
         redact: createRedactor(config),
-        cacheAvailable: () => cache.status.available,
         log: (line: string) => {
             logger.info(line);
         },

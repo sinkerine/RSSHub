@@ -5,22 +5,7 @@ import { config } from '@/config';
 
 import { clipText } from './text';
 
-export type McpErrorCode =
-    | 'invalid_arguments'
-    | 'route_not_allowed'
-    | 'route_not_found'
-    | 'invalid_parameter'
-    | 'source_config_missing'
-    | 'access_denied'
-    | 'captcha_required'
-    | 'upstream_rate_limited'
-    | 'upstream_error'
-    | 'request_in_progress'
-    | 'empty_result'
-    | 'unsupported_result'
-    | 'capacity_exceeded'
-    | 'timeout'
-    | 'internal_error';
+export type McpErrorCode = 'invalid_parameter' | 'not_found' | 'invalid_cursor' | 'source_config_missing' | 'upstream_rate_limited' | 'upstream_error' | 'capacity_exceeded' | 'timeout' | 'internal_error';
 export interface McpToolError {
     code: McpErrorCode;
     message: string;
@@ -29,30 +14,22 @@ export interface McpToolError {
     phase?: 'queued' | 'running';
 }
 const messages: Record<McpErrorCode, string> = {
-    invalid_arguments: 'The feed path is invalid.',
-    route_not_allowed: 'This feed route is not allowed.',
-    route_not_found: 'The feed route was not found.',
-    invalid_parameter: 'The route parameter is invalid.',
+    invalid_parameter: 'The Twitter parameter is invalid.',
+    not_found: 'The requested post was not found.',
+    invalid_cursor: 'This cursor is malformed or does not belong to this query or backend; call again without cursor.',
     source_config_missing: 'The source requires configuration.',
-    access_denied: 'Access to the source was denied.',
-    captcha_required: 'The source requires a CAPTCHA.',
     upstream_rate_limited: 'The source rate limit was reached.',
     upstream_error: 'The source request failed.',
-    request_in_progress: 'This feed is already being fetched.',
-    empty_result: 'The source returned an empty feed.',
-    unsupported_result: 'The route did not return feed items.',
     capacity_exceeded: 'MCP request capacity was exceeded.',
     timeout: 'The MCP request deadline expired.',
     internal_error: 'An internal MCP error occurred.',
 };
-const retryable = new Set<McpErrorCode>(['upstream_rate_limited', 'upstream_error', 'request_in_progress', 'capacity_exceeded', 'timeout']);
+const retryable = new Set<McpErrorCode>(['upstream_rate_limited', 'upstream_error', 'capacity_exceeded', 'timeout']);
 const errorNames: Record<string, McpErrorCode> = {
-    NotFoundError: 'route_not_found',
+    NotFoundError: 'not_found',
+    InvalidCursorError: 'invalid_cursor',
     InvalidParameterError: 'invalid_parameter',
     ConfigNotFoundError: 'source_config_missing',
-    RejectError: 'access_denied',
-    CaptchaError: 'captcha_required',
-    RequestInProgressError: 'request_in_progress',
     McpCapacityError: 'capacity_exceeded',
 };
 type ErrorLike = { name?: string; message?: string; statusCode?: number; status?: number; response?: { status?: number; headers?: Headers | Record<string, unknown> } };
@@ -117,9 +94,9 @@ export function classifyError(error: unknown): McpToolError {
     const detail = typeof value.message === 'string' ? value.message : '';
     const status = value.statusCode ?? value.status ?? value.response?.status;
     const namedCode = Object.hasOwn(errorNames, value.name || '') ? errorNames[value.name || ''] : undefined;
-    const code: McpErrorCode = namedCode || (detail.startsWith('this route is empty') ? 'empty_result' : status === 429 || /\berror:?\s*429\b/i.test(detail) ? 'upstream_rate_limited' : 'upstream_error');
+    const code: McpErrorCode = namedCode || (status === 429 || /\berror:?\s*429\b/i.test(detail) ? 'upstream_rate_limited' : 'upstream_error');
     const safeDetail = clipText(createRedactor(config)(detail), 300);
-    const result: McpToolError = { code, message: messages[code] + (safeDetail ? ` ${safeDetail}` : ''), retryable: retryable.has(code) };
+    const result: McpToolError = { code, message: clipText(messages[code] + (safeDetail && code !== 'invalid_cursor' ? ` ${safeDetail}` : ''), 300), retryable: retryable.has(code) };
     if (code === 'upstream_rate_limited' && value.response?.headers) {
         const headers = value.response.headers;
         const headerValue = typeof headers.get === 'function' ? headers.get('Retry-After') : Object.entries(headers).find(([name]) => name.toLowerCase() === 'retry-after')?.[1];

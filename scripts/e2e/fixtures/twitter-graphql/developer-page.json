@@ -1,0 +1,25 @@
+{
+    "data": [
+        {
+            "id": "900000000000000123",
+            "text": "Developer synthetic post &amp; text",
+            "author_id": "900000000000000002",
+            "created_at": "2025-01-30T12:00:00Z",
+            "public_metrics": {
+                "like_count": 7
+            }
+        }
+    ],
+    "includes": {
+        "users": [
+            {
+                "id": "900000000000000002",
+                "username": "rsshub_test",
+                "name": "Synthetic Fixture"
+            }
+        ]
+    },
+    "meta": {
+        "next_token": "developer-page-2"
+    }
+}

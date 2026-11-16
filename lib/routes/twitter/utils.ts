@@ -4,6 +4,16 @@ import { renderToString } from 'hono/jsx/dom/server';
 import { parseDate } from '@/utils/parse-date';
 import { fallback, queryToBoolean, queryToInteger } from '@/utils/readable-social';
 
+export const TWEET_DETAIL_PARAMS = {
+    with_rux_injections: false,
+    includePromotedContent: true,
+    withCommunity: true,
+    withQuickPromoteEligibilityTweetFields: true,
+    withBirdwatchNotes: true,
+    withVoice: true,
+    withV2Timeline: true,
+};
+
 const getPublicationDate = (value?: string | number | Date): Date | undefined => {
     if ((typeof value !== 'string' && typeof value !== 'number' && !(value instanceof Date)) || (typeof value === 'string' && !value.trim())) {
         return undefined;

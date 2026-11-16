@@ -3,11 +3,11 @@ import InvalidParameterError from '@/errors/types/invalid-parameter';
 import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
 
-import { getTwitterUserCacheKey, TWITTER_USER_CACHE_EXPIRE } from '../../utils';
+import { getTwitterUserCacheKey, TWEET_DETAIL_PARAMS, TWITTER_USER_CACHE_EXPIRE } from '../../utils';
 import { baseUrl, gqlFeatures, gqlMap, initGqlMap } from './constants';
 import { normalizeUser } from './user';
 import type { ApiParams } from './utils';
-import { gatherLegacyFromData, paginationTweets, twitterGot } from './utils';
+import { fetchTimelinePage, gatherLegacyFromData, paginationTweets, twitterGot } from './utils';
 
 const isRestId = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
 
@@ -88,39 +88,23 @@ const cacheTryGet = async (_id, params, operationName, func) => {
     return cache.tryGet(getTwitterUserCacheKey(user.rest_id, operationName, params), () => func(user.rest_id, params), config.cache.routeExpire, false);
 };
 
-const getUserTweets = (id: string, params?: ApiParams) =>
-    cacheTryGet(id, params, 'getUserTweets', async (id, params: ApiParams = {}) => {
-        const tweets = gatherLegacyFromData(
-            await paginationTweets('UserTweets', id, {
-                ...params,
-                count: params.count ?? 20,
-                includePromotedContent: true,
-                withQuickPromoteEligibilityTweetFields: true,
-                withVoice: true,
-                withV2Timeline: true,
-            }),
-            ['profile-conversation-'],
-            id
-        );
-        // Keep only root posts; drop replies and self-thread continuations from profile-conversation modules
-        return tweets.filter((t) => !t.in_reply_to_status_id_str);
+const userTweetsPage = async (id: string, params: ApiParams = {}, replies = false) => {
+    const page = await fetchTimelinePage(replies ? 'UserTweetsAndReplies' : 'UserTweets', id, {
+        ...params,
+        count: params.count ?? 20,
+        includePromotedContent: true,
+        ...(replies ? { withCommunity: true } : { withQuickPromoteEligibilityTweetFields: true }),
+        withVoice: true,
+        withV2Timeline: true,
+        ...(params.cursor && { cursor: params.cursor }),
     });
-
-const getUserTweetsAndReplies = (id: string, params?: ApiParams) =>
-    cacheTryGet(id, params, 'getUserTweetsAndReplies', async (id, params: ApiParams = {}) =>
-        gatherLegacyFromData(
-            await paginationTweets('UserTweetsAndReplies', id, {
-                ...params,
-                count: params.count ?? 20,
-                includePromotedContent: true,
-                withCommunity: true,
-                withVoice: true,
-                withV2Timeline: true,
-            }),
-            ['profile-conversation-'],
-            id
-        )
-    );
+    const tweets = gatherLegacyFromData(page.entries, ['profile-conversation-'], id);
+    return { tweets: replies ? tweets : tweets.filter((tweet) => !tweet.in_reply_to_status_id_str), ...(page.nextCursor && { nextCursor: page.nextCursor }) };
+};
+const getUserTweets = (id: string, params?: ApiParams) => cacheTryGet(id, params, 'getUserTweets', async (id, params) => (await userTweetsPage(id, params)).tweets);
+const getUserTweetsAndReplies = (id: string, params?: ApiParams) => cacheTryGet(id, params, 'getUserTweetsAndReplies', async (id, params) => (await userTweetsPage(id, params, true)).tweets);
+const getUserTweetsPage = async (id: string, options?: { cursor?: string }) => userTweetsPage((await getUserData(id)).rest_id, options);
+const getUserTweetsAndRepliesPage = async (id: string, options?: { cursor?: string }) => userTweetsPage((await getUserData(id)).rest_id, options, true);
 
 const getUserMedia = (id: string, params?: ApiParams) =>
     cacheTryGet(id, params, 'getUserMedia', async (id, params = {}) =>
@@ -151,41 +135,43 @@ const getUserLikes = (id: string, params?: ApiParams) =>
         )
     );
 
-const getUserTweet = (id: string, params?: ApiParams) =>
-    cacheTryGet(id, params, 'getUserTweet', async (id, params = {}) =>
-        gatherLegacyFromData(
-            await paginationTweets(
-                'TweetDetail',
-                id,
-                {
-                    ...params,
-                    includeHasBirdwatchNotes: false,
-                    includePromotedContent: false,
-                    withBirdwatchNotes: false,
-                    withVoice: false,
-                    withV2Timeline: true,
-                },
-                ['threaded_conversation_with_injections_v2']
-            ),
-            ['homeConversation-', 'conversationthread-']
-        )
-    );
-
-const getSearch = async (keywords: string, params?: ApiParams) =>
+const userTweetDetail = async (id: string, params: ApiParams = {}) =>
     gatherLegacyFromData(
         await paginationTweets(
-            'SearchTimeline',
-            undefined,
+            'TweetDetail',
+            id,
             {
                 ...params,
-                rawQuery: keywords,
-                count: 20,
-                querySource: 'typed_query',
-                product: 'Latest',
+                includeHasBirdwatchNotes: false,
+                includePromotedContent: false,
+                withBirdwatchNotes: false,
+                withVoice: false,
+                withV2Timeline: true,
             },
-            ['search_by_raw_query', 'search_timeline', 'timeline']
-        )
+            ['threaded_conversation_with_injections_v2']
+        ),
+        ['homeConversation-', 'conversationthread-']
     );
+const getUserTweet = (id: string, params?: ApiParams) => cacheTryGet(id, params, 'getUserTweet', userTweetDetail);
+const getTweetDetail = async (id: string, tweetId: string) => userTweetDetail((await getUserData(id)).rest_id, { focalTweetId: tweetId, ...TWEET_DETAIL_PARAMS });
+const searchPage = async (keywords: string, params: ApiParams = {}) => {
+    const page = await fetchTimelinePage(
+        'SearchTimeline',
+        undefined,
+        {
+            ...params,
+            rawQuery: keywords,
+            count: 20,
+            querySource: 'typed_query',
+            product: 'Latest',
+            ...(params.cursor && { cursor: params.cursor }),
+        },
+        ['search_by_raw_query', 'search_timeline', 'timeline']
+    );
+    return { tweets: gatherLegacyFromData(page.entries), ...(page.nextCursor && { nextCursor: page.nextCursor }) };
+};
+const getSearch = async (keywords: string, params?: ApiParams) => (await searchPage(keywords, params)).tweets;
+const getSearchPage = (keywords: string, options?: { cursor?: string }) => searchPage(keywords, options);
 
 const getList = async (id: string, params?: ApiParams) =>
     gatherLegacyFromData(
@@ -243,6 +229,10 @@ const getHomeLatestTimeline = async (id: string, params?: ApiParams) =>
 
 export default {
     getUser,
+    getUserTweetsPage,
+    getUserTweetsAndRepliesPage,
+    getSearchPage,
+    getTweetDetail,
     getUserTweets,
     getUserTweetsAndReplies,
     getUserMedia,

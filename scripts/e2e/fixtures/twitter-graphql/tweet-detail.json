@@ -1,0 +1,262 @@
+{
+    "data": {
+        "threaded_conversation_with_injections_v2": {
+            "instructions": [
+                {
+                    "type": "TimelineAddEntries",
+                    "entries": [
+                        {
+                            "entryId": "tweet-900000000000000123",
+                            "content": {
+                                "itemContent": {
+                                    "tweet_results": {
+                                        "result": {
+                                            "__typename": "Tweet",
+                                            "rest_id": "900000000000000123",
+                                            "core": {
+                                                "user_results": {
+                                                    "result": {
+                                                        "__typename": "User",
+                                                        "rest_id": "900000000000000002",
+                                                        "legacy": {
+                                                            "id_str": "900000000000000002",
+                                                            "screen_name": "rsshub_test",
+                                                            "name": "Synthetic Fixture",
+                                                            "description": "Synthetic Twitter capability profile",
+                                                            "profile_image_url_https": "https://example.invalid/avatar_normal.jpg",
+                                                            "pinned_tweet_ids_str": ["900000000000000123"]
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "legacy": {
+                                                "id_str": "900000000000000123",
+                                                "user_id_str": "900000000000000002",
+                                                "full_text": "Synthetic page post 123 &amp; https://t.co/docs",
+                                                "created_at": "Thu Jan 30 12:00:00 +0000 2025",
+                                                "entities": {
+                                                    "urls": [
+                                                        {
+                                                            "url": "https://t.co/docs",
+                                                            "expanded_url": "https://example.com/docs?q=fixture"
+                                                        }
+                                                    ],
+                                                    "hashtags": [
+                                                        {
+                                                            "text": "fixture"
+                                                        }
+                                                    ],
+                                                    "user_mentions": [
+                                                        {
+                                                            "screen_name": "example"
+                                                        }
+                                                    ]
+                                                },
+                                                "favorite_count": 2,
+                                                "retweet_count": 0,
+                                                "reply_count": 0,
+                                                "quote_count": 0,
+                                                "lang": "en",
+                                                "extended_entities": {
+                                                    "media": [
+                                                        {
+                                                            "type": "photo",
+                                                            "media_url_https": "https://example.com/photo.jpg",
+                                                            "url": "https://t.co/photo",
+                                                            "sizes": {
+                                                                "large": {
+                                                                    "w": 640,
+                                                                    "h": 480
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "entryId": "tweet-900000000000000121",
+                            "content": {
+                                "itemContent": {
+                                    "tweet_results": {
+                                        "result": {
+                                            "__typename": "Tweet",
+                                            "rest_id": "900000000000000121",
+                                            "core": {
+                                                "user_results": {
+                                                    "result": {
+                                                        "__typename": "User",
+                                                        "rest_id": "900000000000000002",
+                                                        "legacy": {
+                                                            "id_str": "900000000000000002",
+                                                            "screen_name": "rsshub_test",
+                                                            "name": "Synthetic Fixture",
+                                                            "description": "Synthetic Twitter capability profile",
+                                                            "profile_image_url_https": "https://example.invalid/avatar_normal.jpg",
+                                                            "pinned_tweet_ids_str": ["900000000000000123"]
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "legacy": {
+                                                "id_str": "900000000000000121",
+                                                "user_id_str": "900000000000000002",
+                                                "full_text": "Synthetic page post 121 &amp; https://t.co/docs",
+                                                "created_at": "Thu Jan 30 12:00:00 +0000 2025",
+                                                "entities": {
+                                                    "urls": [
+                                                        {
+                                                            "url": "https://t.co/docs",
+                                                            "expanded_url": "https://example.com/docs?q=fixture"
+                                                        }
+                                                    ],
+                                                    "hashtags": [
+                                                        {
+                                                            "text": "fixture"
+                                                        }
+                                                    ],
+                                                    "user_mentions": [
+                                                        {
+                                                            "screen_name": "example"
+                                                        }
+                                                    ]
+                                                },
+                                                "favorite_count": 2,
+                                                "retweet_count": 0,
+                                                "reply_count": 0,
+                                                "quote_count": 0,
+                                                "lang": "en",
+                                                "in_reply_to_status_id_str": "900000000000000120",
+                                                "in_reply_to_screen_name": "rsshub_test"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "entryId": "tweet-900000000000000120",
+                            "content": {
+                                "itemContent": {
+                                    "tweet_results": {
+                                        "result": {
+                                            "__typename": "Tweet",
+                                            "rest_id": "900000000000000120",
+                                            "core": {
+                                                "user_results": {
+                                                    "result": {
+                                                        "__typename": "User",
+                                                        "rest_id": "900000000000000002",
+                                                        "legacy": {
+                                                            "id_str": "900000000000000002",
+                                                            "screen_name": "rsshub_test",
+                                                            "name": "Synthetic Fixture",
+                                                            "description": "Synthetic Twitter capability profile",
+                                                            "profile_image_url_https": "https://example.invalid/avatar_normal.jpg",
+                                                            "pinned_tweet_ids_str": ["900000000000000123"]
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "legacy": {
+                                                "id_str": "900000000000000120",
+                                                "user_id_str": "900000000000000002",
+                                                "full_text": "Synthetic page post 120 &amp; https://t.co/docs",
+                                                "created_at": "Thu Jan 30 12:00:00 +0000 2025",
+                                                "entities": {
+                                                    "urls": [
+                                                        {
+                                                            "url": "https://t.co/docs",
+                                                            "expanded_url": "https://example.com/docs?q=fixture"
+                                                        }
+                                                    ],
+                                                    "hashtags": [
+                                                        {
+                                                            "text": "fixture"
+                                                        }
+                                                    ],
+                                                    "user_mentions": [
+                                                        {
+                                                            "screen_name": "example"
+                                                        }
+                                                    ]
+                                                },
+                                                "favorite_count": 2,
+                                                "retweet_count": 0,
+                                                "reply_count": 0,
+                                                "quote_count": 0,
+                                                "lang": "en"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "entryId": "tweet-900000000000000119",
+                            "content": {
+                                "itemContent": {
+                                    "tweet_results": {
+                                        "result": {
+                                            "__typename": "Tweet",
+                                            "rest_id": "900000000000000119",
+                                            "core": {
+                                                "user_results": {
+                                                    "result": {
+                                                        "__typename": "User",
+                                                        "rest_id": "900000000000000002",
+                                                        "legacy": {
+                                                            "id_str": "900000000000000002",
+                                                            "screen_name": "rsshub_test",
+                                                            "name": "Synthetic Fixture",
+                                                            "description": "Synthetic Twitter capability profile",
+                                                            "profile_image_url_https": "https://example.invalid/avatar_normal.jpg",
+                                                            "pinned_tweet_ids_str": ["900000000000000123"]
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "legacy": {
+                                                "id_str": "900000000000000119",
+                                                "user_id_str": "900000000000000002",
+                                                "full_text": "Synthetic page post 119 &amp; https://t.co/docs",
+                                                "created_at": "Thu Jan 30 12:00:00 +0000 2025",
+                                                "entities": {
+                                                    "urls": [
+                                                        {
+                                                            "url": "https://t.co/docs",
+                                                            "expanded_url": "https://example.com/docs?q=fixture"
+                                                        }
+                                                    ],
+                                                    "hashtags": [
+                                                        {
+                                                            "text": "fixture"
+                                                        }
+                                                    ],
+                                                    "user_mentions": [
+                                                        {
+                                                            "screen_name": "example"
+                                                        }
+                                                    ]
+                                                },
+                                                "favorite_count": 2,
+                                                "retweet_count": 0,
+                                                "reply_count": 0,
+                                                "quote_count": 0,
+                                                "lang": "en"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

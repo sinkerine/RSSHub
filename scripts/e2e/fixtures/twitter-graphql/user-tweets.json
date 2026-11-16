@@ -1,0 +1,65 @@
+{
+    "data": {
+        "user": {
+            "result": {
+                "timeline": {
+                    "timeline": {
+                        "instructions": [
+                            {
+                                "type": "TimelineAddEntries",
+                                "entries": [
+                                    {
+                                        "entryId": "tweet-900000000000000101",
+                                        "content": {
+                                            "itemContent": {
+                                                "tweet_results": {
+                                                    "result": {
+                                                        "__typename": "Tweet",
+                                                        "rest_id": "900000000000000101",
+                                                        "core": {
+                                                            "user_results": {
+                                                                "result": {
+                                                                    "__typename": "User",
+                                                                    "rest_id": "900000000000000001",
+                                                                    "legacy": {
+                                                                        "id_str": "900000000000000001",
+                                                                        "screen_name": "rsshub_fixture",
+                                                                        "name": "Synthetic Fixture",
+                                                                        "description": "Synthetic Twitter capability profile",
+                                                                        "profile_image_url_https": "https://example.invalid/avatar_normal.jpg",
+                                                                        "pinned_tweet_ids_str": []
+                                                                    }
+                                                                }
+                                                            }
+                                                        },
+                                                        "legacy": {
+                                                            "id_str": "900000000000000101",
+                                                            "user_id_str": "900000000000000001",
+                                                            "full_text": "Synthetic capability acquisition post",
+                                                            "created_at": "Thu Jan 30 12:00:00 +0000 2025",
+                                                            "entities": {
+                                                                "urls": [],
+                                                                "hashtags": [],
+                                                                "user_mentions": [],
+                                                                "symbols": []
+                                                            },
+                                                            "favorite_count": 2,
+                                                            "retweet_count": 0,
+                                                            "reply_count": 0,
+                                                            "quote_count": 0,
+                                                            "lang": "en"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}

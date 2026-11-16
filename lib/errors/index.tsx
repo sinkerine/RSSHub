@@ -4,7 +4,6 @@ import { routePath } from 'hono/route';
 
 import { config } from '@/config';
 import { getDebugInfo, setDebugInfo } from '@/utils/debug-info';
-import { getInternalRequestState } from '@/utils/internal-request';
 import logger from '@/utils/logger';
 import { requestMetric } from '@/utils/otel';
 import Error from '@/views/error';
@@ -78,12 +77,6 @@ export const errorHandler: ErrorHandler = (error, ctx) => {
     }
     logger.error(`Error in ${requestPath}: ${errorMessage}`);
     requestMetric.error({ path: matchedRoute, method: ctx.req.method, status: ctx.res.status });
-
-    const internal = getInternalRequestState(ctx);
-    if (internal) {
-        internal.error = error;
-        return ctx.json({ error: { name: error.name, message: error.message } });
-    }
 
     return config.isPackage || ctx.req.query('format') === 'json'
         ? ctx.json({

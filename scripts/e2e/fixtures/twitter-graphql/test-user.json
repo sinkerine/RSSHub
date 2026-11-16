@@ -1,0 +1,18 @@
+{
+    "data": {
+        "user": {
+            "result": {
+                "__typename": "User",
+                "rest_id": "900000000000000002",
+                "legacy": {
+                    "id_str": "900000000000000002",
+                    "screen_name": "rsshub_test",
+                    "name": "Synthetic Fixture",
+                    "description": "Synthetic Twitter capability profile",
+                    "profile_image_url_https": "https://example.invalid/avatar_normal.jpg",
+                    "pinned_tweet_ids_str": ["900000000000000123"]
+                }
+            }
+        }
+    }
+}

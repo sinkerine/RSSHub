@@ -238,17 +238,3 @@ describe('createDevRegistry', () => {
         }
     });
 });
-
-describe('ensureNamespacesLoaded', () => {
-    beforeEach(() => {
-        directoryImportMock.mockReset().mockImplementation(mockImplementation);
-    });
-    it('ensureNamespacesLoaded loads only requested directories; idempotent and ignores unknown', async () => {
-        const { dev, namespaces } = buildApp();
-        await dev.ensureLoaded(['github', 'unknown']);
-        expect(Object.keys(namespaces).sort()).toEqual(['github', 'github/enterprise']);
-        expect(directoryImportMock).toHaveBeenCalledTimes(1);
-        await dev.ensureLoaded(['github']);
-        expect(directoryImportMock).toHaveBeenCalledTimes(1);
-    });
-});

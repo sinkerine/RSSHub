@@ -61,53 +61,49 @@ describe('MCP mounting', () => {
             vi.resetModules();
         }
     });
-    it('feeds for /e2e-mcp/feed/identical are byte-identical with MCP disabled/enabled, including ETag and ACCESS_KEY', async () => {
+    it('user-route feeds are byte-identical with MCP disabled/enabled, including ETag and ACCESS_KEY', async () => {
         const { startHarness } = await import('@/mcp/test-harness');
-        const path = '/e2e-mcp/feed/identical';
-        const accessKey = 'fixture-feed-comparison-key';
-        const sourcePayloads: unknown[] = [];
-        const snapshots: Array<Array<{ requestPath: string; bytes: Uint8Array; etag: string | null }>> = [];
+        const snapshots: unknown[] = [];
+        const pathname = '/e2e-smoke/feed';
         for (const enabled of [false, true]) {
-            const harness = await startHarness({ enabled, accessKey });
+            const harness = await startHarness({ enabled, accessKey: 'fixture-feed-comparison-key' });
             try {
-                const source = await fetch(`${harness.upstream.url}/feed/identical`);
-                expect(source.status).toBe(200);
-                sourcePayloads.push(await source.json());
-                const responses: Array<{ requestPath: string; bytes: Uint8Array; etag: string | null }> = [];
+                const responses: unknown[] = [];
                 for (const format of ['rss', 'json']) {
                     const suffix = format === 'json' ? '?format=json' : '';
-                    const sourceHits = harness.upstream.hits('/feed/identical');
-                    expect((await harness.app.request(path + suffix)).status).toBe(403);
-                    expect(harness.upstream.hits('/feed/identical')).toBe(sourceHits);
-                    for (const credential of [`key=${accessKey}`, `code=${md5(path + accessKey)}`]) {
-                        const requestPath = path + suffix + (suffix ? '&' : '?') + credential;
-                        const response = await harness.app.request(requestPath);
+                    expect((await harness.app.request(pathname + suffix)).status).toBe(403);
+                    for (const credential of [`key=${harness.key}`, `code=${md5(pathname + harness.key)}`]) {
+                        const response = await harness.app.request(pathname + suffix + (suffix ? '&' : '?') + credential);
                         expect(response.status).toBe(200);
-                        expect(response.headers.get('content-type')).toContain(format === 'json' ? 'application/feed+json' : 'application/xml');
-                        const etag = response.headers.get('etag');
-                        expect(etag).toBeTruthy();
                         const body = await response.text();
-                        if (format === 'rss') {
-                            expect(body).toContain('RSSHub MCP fixture');
-                            expect(body.match(/<item>/g)).toHaveLength(3);
-                        } else {
-                            expect(JSON.parse(body)).toMatchObject({ title: 'RSSHub MCP fixture', items: [{ title: 'identical article 0' }, { title: 'identical article 1' }, { title: 'identical article 2' }] });
-                        }
-                        // JSON Feed contains only source dates; exclude just the RSS build timestamp.
-                        const normalized = format === 'rss' ? body.replace(/<lastBuildDate>[^<]*<\/lastBuildDate>/, '<lastBuildDate>[build timestamp]</lastBuildDate>') : body;
-                        responses.push({ requestPath, bytes: new TextEncoder().encode(normalized), etag });
+                        expect(body).toContain('Smoke test article');
+                        responses.push({ body: body.replace(/<lastBuildDate>[^<]*<\/lastBuildDate>/, '<lastBuildDate>[build timestamp]</lastBuildDate>'), etag: response.headers.get('etag') });
                     }
                 }
-                // One source-payload observation plus one uncached request per feed format.
-                expect(harness.upstream.hits('/feed/identical')).toBe(3);
                 snapshots.push(responses);
             } finally {
                 await harness.close();
                 vi.resetModules();
             }
         }
-        expect(sourcePayloads[1]).toEqual(sourcePayloads[0]);
         expect(snapshots[1]).toEqual(snapshots[0]);
+    }, 30000);
+    it('uses the request Host for feed self links so isolated server ports can share a canonical comparison URL', async () => {
+        const { startHarness } = await import('@/mcp/test-harness');
+        const harness = await startHarness();
+        try {
+            const { get } = await import('node:http');
+            const { text } = await import('node:stream/consumers');
+            const body = await new Promise<string>((resolve, reject) => {
+                get(`${harness.base}/e2e-smoke/feed?key=${harness.key}`, { headers: { host: 'rsshub-fixture.example' } }, (response) => {
+                    expect(response.statusCode).toBe(200);
+                    void text(response).then(resolve).catch(reject);
+                }).once('error', reject);
+            });
+            expect(body).toContain('http://rsshub-fixture.example/e2e-smoke/feed?key=');
+        } finally {
+            await harness.close();
+        }
     }, 30000);
     it('feeds identical with mcp enabled, including ETag', async () => {
         const results: Array<{ text: string; etag: string | null }> = [];

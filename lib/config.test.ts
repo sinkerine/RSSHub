@@ -222,14 +222,13 @@ describe('config remote errors', () => {
 });
 
 describe('MCP config', () => {
-    it('is disabled with eight Twitter routes and bounded defaults', async () => {
-        const { config, DEFAULT_MCP_ROUTES } = await import('./config');
-        expect(config.mcp).toEqual({ enable: false, routes: [...DEFAULT_MCP_ROUTES], maxConcurrency: 1, maxQueue: 4, timeout: 50, maxItems: 20, maxResponseBytes: 262144, allowedOrigins: [] });
-        expect(DEFAULT_MCP_ROUTES).toHaveLength(8);
+    it('is disabled with three Twitter tools and bounded defaults', async () => {
+        const { config } = await import('./config');
+        expect(config.mcp).toEqual({ enable: false, tools: ['twitter_search', 'twitter_user_tweets', 'twitter_get_tweet'], maxConcurrency: 1, maxQueue: 4, timeout: 50, maxResponseBytes: 262144, allowedOrigins: [] });
     });
     it('parses lists, booleans and rejects out-of-bound integers', async () => {
         vi.stubEnv('MCP_ENABLE', 'true');
-        vi.stubEnv('MCP_ROUTES', ' /test/:id, , /e2e-mcp/feed/:id ');
+        vi.stubEnv('MCP_TOOLS', ' twitter_search, , twitter_user_tweets ');
         vi.stubEnv('MCP_ALLOWED_ORIGINS', ' https://one.example, ,https://two.example ');
         vi.stubEnv('MCP_MAX_CONCURRENCY', '0');
         vi.stubEnv('MCP_MAX_QUEUE', '0');
@@ -240,12 +239,11 @@ describe('MCP config', () => {
             const { config } = await import('./config');
             expect(config.mcp).toMatchObject({
                 enable: true,
-                routes: ['/test/:id', '/e2e-mcp/feed/:id'],
+                tools: ['twitter_search', 'twitter_user_tweets'],
                 allowedOrigins: ['https://one.example', 'https://two.example'],
                 maxConcurrency: 1,
                 maxQueue: 0,
                 timeout: 50,
-                maxItems: 100,
                 maxResponseBytes: 262144,
             });
         } finally {

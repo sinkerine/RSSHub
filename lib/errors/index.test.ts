@@ -169,21 +169,3 @@ describe('error handler sentry', () => {
         delete process.env.SENTRY;
     });
 });
-
-it('captures exact error class for internal env marker after normal reporting', async () => {
-    const { createInternalRequestEnv } = await import('@/utils/internal-request');
-    const { errorHandler } = await import('@/errors');
-    const error = new Error('source missing');
-    Object.defineProperty(error, 'name', { value: 'ConfigNotFoundError' });
-    const state: { error?: unknown } = {};
-    const internalApp = new Hono();
-    internalApp.get('/fail', () => {
-        throw error;
-    });
-    internalApp.onError(errorHandler);
-    const response = await internalApp.fetch(new Request('http://localhost/fail'), createInternalRequestEnv(state));
-    expect(state.error).toBe(error);
-    expect(await response.json()).toEqual({ error: { name: 'ConfigNotFoundError', message: 'source missing' } });
-    const external = await internalApp.request('/fail', { headers: { 'x-rsshub-internal': 'true' } });
-    expect(external.headers.get('content-type')).toContain('text/html');
-});

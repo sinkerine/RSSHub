@@ -163,16 +163,31 @@ This smoke test does not verify live routes.
 
 ## MCP endpoint E2E
 
-Run `node scripts/e2e/mcp.mjs` under `agent-job run --e2e mcp` in the pinned
-Nix shell, or use `pnpm test:e2e:mcp`. Install dependencies with `rsshub-setup`
-and run `pnpm build` as separate heavy jobs first. The runner retains evidence
-under `assets/build/e2e/mcp-run-*` and cleans its checkout-keyed scratch state.
-It verifies both MCP protocol eras, allowlisted in-process feeds, shared memory
-cache, limits, timeouts, HTTP cancellation, Origin checks and the production
-Node build using a loopback fixture. It does not verify live Twitter/X, Redis,
-multiple replicas, HTTPS/proxy deployment or any particular agent product.
-The 2-CPU/4-GiB estimate covers one Node RSSHub process, the SDK clients, fixture
-upstream and teardown; setup and builds are separate workloads.
+An independent verifier runs `node scripts/e2e/mcp.mjs` under
+`agent-job run --e2e mcp -- nix develop --impure -c` from the worktree.
+Install dependencies, when needed, with `bash scripts/dev-setup.sh` and run
+`pnpm build` directly in the pinned Nix shell under the assigned build lock
+before the full journey; only the E2E stack is queued. Do not use self-queued
+setup/build wrappers or nest `pnpm test:e2e:mcp` inside a reservation.
+The runner retains evidence under `assets/build/e2e/mcp-run-*` and cleans its
+checkout-keyed scratch state. `--capability` requires no production build: it
+checks real dev-server MCP discovery in both protocol eras, protected Twitter
+RSS acquisition through a synthetic third-party GraphQL fixture, cached RSS
+reuse, and blocked query-ID discovery with fallback. A socket guard allows
+only the fixture's literal loopback address and port, including requests made
+with an explicit undici CookieAgent. Missing Twitter tools on the baseline
+are recorded as expected feature failures, separately from acquisition.
+The full journey checks the three Twitter tools, exact query mapping, profile
+and repost/reply handling, fresh reads independent of RSS caches/claims, errors,
+limits, cancellation, cursor walks (including unsigned edits), tool subsets, and
+byte-identical protected feeds/ETags with MCP disabled/enabled. It repeats core
+journeys against the production bundle. Feed comparisons fix the server wall clock
+and request Host (self-link origin); real timers remain active. TweetDetail success is covered separately by
+real-entry adapter integration tests with transport fixtures.
+No live Twitter/X, developer API, Redis, multiple replicas, HTTPS/proxy deployment
+or particular agent product is verified. The 2-CPU/4-GiB estimate covers one Node
+RSSHub process, SDK clients, fixture upstream and teardown; setup and builds
+are separate workloads.
 
 The agent runs these E2E tests when a feature is first added; future pushes and deployments do not require rerunning them; existing unit tests must still be run.
 

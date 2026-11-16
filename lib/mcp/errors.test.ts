@@ -10,12 +10,9 @@ import { textContent } from './test-harness';
 
 describe('MCP errors', () => {
     it.each([
-        ['NotFoundError', 'route_not_found', false],
+        ['NotFoundError', 'not_found', false],
         ['InvalidParameterError', 'invalid_parameter', false],
         ['ConfigNotFoundError', 'source_config_missing', false],
-        ['RejectError', 'access_denied', false],
-        ['CaptchaError', 'captcha_required', false],
-        ['RequestInProgressError', 'request_in_progress', true],
         ['Error', 'upstream_error', true],
     ])('classifies %s by name', (name, code, retryable) => {
         const error = new Error('detail');
@@ -30,8 +27,7 @@ describe('MCP errors', () => {
         const redact = createRedactor({ ...config, publicAlias: shared, auth: shared } as unknown as typeof config);
         expect(redact('aliasSecret')).toBe('[redacted]');
     });
-    it('classifies empty and all 429 representations, preserving name precedence', () => {
-        expect(classifyError(new Error('this route is empty, no items'))).toMatchObject({ code: 'empty_result', retryable: false });
+    it('classifies all 429 representations, preserving name precedence', () => {
         for (const error of [{ statusCode: 429 }, { status: 429 }, { response: { status: 429 } }, new Error('Twitter API error: 429')]) {
             expect(classifyError(error)).toMatchObject({ code: 'upstream_rate_limited', retryable: true });
         }

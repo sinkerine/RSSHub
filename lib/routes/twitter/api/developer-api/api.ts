@@ -80,6 +80,7 @@ type DevApiParams = Record<string, string | number | boolean | undefined>;
 interface TweetsV2Response {
     data?: TweetV2[];
     includes?: ApiV2Includes;
+    meta?: { next_token?: string };
 }
 
 const appClients: ClientWrapper[] = [];
@@ -303,6 +304,30 @@ const cacheTryGet = async (_id: string, params: DevApiParams | undefined, operat
     return cache.tryGet(getTwitterUserCacheKey(id, operationName, params), () => func(id, params), config.cache.routeExpire, false);
 };
 
+const requestUserTimeline = async (id: string, requestParams: DevApiParams) => {
+    const client = await getAppClient();
+    logger.debug(`twitter debug: request URL: https://api.x.com/2/users/${id}/tweets?${queryString.stringify(requestParams)}`);
+    const response = await client.v2.get<TweetsV2Response>(`users/${id}/tweets`, requestParams);
+    return { tweets: mapTweetResponseToLegacy(response), ...(response.meta?.next_token && { nextCursor: response.meta.next_token }) };
+};
+const userTimelinePage = async (user: string, options?: { cursor?: string }, replies = false) => {
+    const data = await getUserData(user);
+    if (!data || !data.id_str) {
+        throw new InvalidParameterError('User not found');
+    }
+    return requestUserTimeline(data.id_str, {
+        max_results: 20,
+        expansions: 'author_id,attachments.media_keys,referenced_tweets.id,referenced_tweets.id.author_id',
+        'tweet.fields': 'created_at,entities,conversation_id,referenced_tweets,author_id,in_reply_to_user_id,public_metrics',
+        'user.fields': 'username,name,profile_image_url,description',
+        'media.fields': 'preview_image_url,url,type,width,height,variants',
+        ...(!replies && { exclude: 'replies' }),
+        ...(options?.cursor && { pagination_token: options.cursor }),
+    });
+};
+const getUserTweetsPage = (user: string, options?: { cursor?: string }) => userTimelinePage(user, options);
+const getUserTweetsAndRepliesPage = (user: string, options?: { cursor?: string }) => userTimelinePage(user, options, true);
+
 const getUserTimeline = async (id: string, params?: DevApiParams, options: DevApiParams = {}) => {
     const count = Number(params?.count ?? 20);
     const snapshotKey = `twitter:developer-timeline:${id}:${count}:${JSON.stringify(options)}`;
@@ -314,7 +339,6 @@ const getUserTimeline = async (id: string, params?: DevApiParams, options: DevAp
             newestId = tweet.id_str;
         }
     }
-    const client = await getAppClient();
     const requestParams = {
         max_results: count,
         ...(newestId !== '0' && { since_id: newestId }),
@@ -324,9 +348,8 @@ const getUserTimeline = async (id: string, params?: DevApiParams, options: DevAp
         'media.fields': 'preview_image_url,url,type,width,height,variants',
         ...options,
     };
-    logger.debug(`twitter debug: request URL: https://api.x.com/2/users/${id}/tweets?${queryString.stringify(requestParams)}`);
-    const response = await client.v2.get(`users/${id}/tweets`, requestParams);
-    const tweets = [...mapTweetResponseToLegacy(response), ...previous]
+    const page = await requestUserTimeline(id, requestParams);
+    const tweets = [...page.tweets, ...previous]
         .filter((tweet, index, all) => all.findIndex((candidate) => candidate.id_str === tweet.id_str) === index)
         .toSorted((a, b) => (BigInt(a.id_str) > BigInt(b.id_str) ? -1 : 1))
         .slice(0, count);
@@ -359,40 +382,44 @@ const getUserLikes = (id: string, params?: DevApiParams) =>
         return mapTweetResponseToLegacy(response);
     });
 
-const getUserTweet = (id: string, params?: DevApiParams) =>
-    cacheTryGet(id, params, 'getUserTweet', async (_id, params = {}) => {
-        const client = await getAppClient();
-        const tweetId = params.focalTweetId;
-        if (!tweetId) {
-            throw new InvalidParameterError('Tweet ID is required');
-        }
-        const response = await client.v2.get(`tweets/${tweetId}`, {
-            expansions: 'author_id,attachments.media_keys,referenced_tweets.id,referenced_tweets.id.author_id',
-            'tweet.fields': 'created_at,entities,conversation_id,referenced_tweets,author_id,in_reply_to_user_id,public_metrics',
-            'user.fields': 'username,name,profile_image_url,description',
-            'media.fields': 'preview_image_url,url,type,width,height,variants',
-        });
-        return mapTweetResponseToLegacy({ data: response?.data ? [response.data] : [], includes: response?.includes });
+const requestTweetDetail = async (_id: string, params: DevApiParams = {}) => {
+    const client = await getAppClient();
+    const tweetId = params.focalTweetId;
+    if (!tweetId) {
+        throw new InvalidParameterError('Tweet ID is required');
+    }
+    const response = await client.v2.get(`tweets/${tweetId}`, {
+        expansions: 'author_id,attachments.media_keys,referenced_tweets.id,referenced_tweets.id.author_id',
+        'tweet.fields': 'created_at,entities,conversation_id,referenced_tweets,author_id,in_reply_to_user_id,public_metrics',
+        'user.fields': 'username,name,profile_image_url,description',
+        'media.fields': 'preview_image_url,url,type,width,height,variants',
     });
+    return mapTweetResponseToLegacy({ data: response?.data ? [response.data] : [], includes: response?.includes });
+};
+const getUserTweet = (id: string, params?: DevApiParams) => cacheTryGet(id, params, 'getUserTweet', requestTweetDetail);
+const getTweetDetail = async (user: string, tweetId: string) => {
+    const data = await getUserData(user);
+    if (!data || !data.id_str) {
+        throw new InvalidParameterError('User not found');
+    }
+    return requestTweetDetail(data.id_str, { focalTweetId: tweetId });
+};
 
-const getSearch = (keywords: string, params?: DevApiParams) =>
-    cache.tryGet(
-        `twitter:search:${keywords}:${JSON.stringify(params)}`,
-        async () => {
-            const client = await getAppClient();
-            const response = await client.v2.get('tweets/search/recent', {
-                query: keywords,
-                max_results: params?.count ?? 20,
-                expansions: 'author_id,attachments.media_keys,referenced_tweets.id,referenced_tweets.id.author_id',
-                'tweet.fields': 'created_at,entities,conversation_id,referenced_tweets,author_id,in_reply_to_user_id,public_metrics',
-                'user.fields': 'username,name,profile_image_url,description',
-                'media.fields': 'preview_image_url,url,type,width,height,variants',
-            });
-            return mapTweetResponseToLegacy(response);
-        },
-        config.cache.routeExpire,
-        false
-    );
+const requestSearch = async (keywords: string, params?: DevApiParams, cursor?: string) => {
+    const client = await getAppClient();
+    const response = await client.v2.get<TweetsV2Response>('tweets/search/recent', {
+        query: keywords,
+        max_results: params?.count ?? 20,
+        expansions: 'author_id,attachments.media_keys,referenced_tweets.id,referenced_tweets.id.author_id',
+        'tweet.fields': 'created_at,entities,conversation_id,referenced_tweets,author_id,in_reply_to_user_id,public_metrics',
+        'user.fields': 'username,name,profile_image_url,description',
+        'media.fields': 'preview_image_url,url,type,width,height,variants',
+        ...(cursor && { next_token: cursor }),
+    });
+    return { tweets: mapTweetResponseToLegacy(response), ...(response.meta?.next_token && { nextCursor: response.meta.next_token }) };
+};
+const getSearch = (keywords: string, params?: DevApiParams) => cache.tryGet(`twitter:search:${keywords}:${JSON.stringify(params)}`, async () => (await requestSearch(keywords, params)).tweets, config.cache.routeExpire, false);
+const getSearchPage = (keywords: string, options?: { cursor?: string }) => requestSearch(keywords, undefined, options?.cursor);
 
 const getList = (id: string, params?: DevApiParams) =>
     cache.tryGet(
@@ -439,6 +466,10 @@ const getUser = (id: string) => getUserData(id);
 
 export default {
     getUser,
+    getUserTweetsPage,
+    getUserTweetsAndRepliesPage,
+    getSearchPage,
+    getTweetDetail,
     getUserTweets,
     getUserTweetsAndReplies,
     getUserMedia,

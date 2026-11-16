@@ -29,7 +29,7 @@ const app = new Hono();
 app.use(trimTrailingSlash());
 if (config.mcp.enable) {
     const { createMcpEndpoint } = await import('@/mcp');
-    app.all('/mcp', createMcpEndpoint({ fetch: (request, env) => app.fetch(request, env) }));
+    app.all('/mcp', createMcpEndpoint());
     logger.warn('MCP endpoint mounted at /mcp without authentication; restrict access at the network or reverse proxy');
 }
 app.use(compress());

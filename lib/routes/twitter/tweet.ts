@@ -3,7 +3,7 @@ import type { Route } from '@/types';
 import { fallback, queryToBoolean } from '@/utils/readable-social';
 
 import api from './api';
-import utils from './utils';
+import utils, { TWEET_DETAIL_PARAMS } from './utils';
 
 export const route: Route = {
     path: '/tweet/:id/status/:status/:original?',
@@ -43,13 +43,7 @@ async function handler(ctx) {
     const original = fallback(undefined, queryToBoolean(routeParams.get('original')), false);
     const params = {
         focalTweetId: status,
-        with_rux_injections: false,
-        includePromotedContent: true,
-        withCommunity: true,
-        withQuickPromoteEligibilityTweetFields: true,
-        withBirdwatchNotes: true,
-        withVoice: true,
-        withV2Timeline: true,
+        ...TWEET_DETAIL_PARAMS,
     };
     await api.init();
     const userInfo = await api.getUser(id);

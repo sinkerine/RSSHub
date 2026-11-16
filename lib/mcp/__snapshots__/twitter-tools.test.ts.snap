@@ -1,0 +1,2683 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Twitter MCP catalog modern=false > exposes exactly the three typed Twitter tools and rejects removed tools 1`] = `
+[
+  {
+    "annotations": {
+      "openWorldHint": true,
+      "readOnlyHint": true,
+    },
+    "description": "Search recent X (Twitter) posts, newest first, through RSSHub's configured Twitter backend. \`query\` is sent verbatim to X search; it is not URL-encoded or rewritten. Returns up to \`limit\` posts from one upstream page. To get older posts, pass the result's \`nextCursor\` as \`cursor\` with the same \`query\`. A missing \`nextCursor\` means there are no more results. Every call is a fresh read. Requires RSSHub Twitter credentials: TWITTER_AUTH_TOKEN, TWITTER_THIRD_PARTY_API, or TWITTER_CONSUMER_KEY + TWITTER_CONSUMER_SECRET (developer API, last 7 days only).",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "cursor": {
+          "description": "Opaque \`nextCursor\` from an earlier \`twitter_search\` result with the same \`query\`. Omit it to get the newest posts. \`limit\` may differ between pages.",
+          "maxLength": 4096,
+          "pattern": "^v1\\.[A-Za-z0-9_-]+$",
+          "type": "string",
+        },
+        "limit": {
+          "default": 20,
+          "description": "Maximum posts to return, 1–20. Default 20.",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer",
+        },
+        "query": {
+          "description": "X search expression (1–512 characters), using the same syntax as the x.com search box. Examples: \`RSSHub\`, \`from:DIYgod RSSHub\`, \`"exact phrase"\`, \`rsshub OR miniflux\`, \`rsshub -bot\`, \`lang:en rsshub\`. X interprets the operators; RSSHub does not validate them. Operator support depends on X and on the configured backend.",
+          "maxLength": 512,
+          "minLength": 1,
+          "type": "string",
+        },
+      },
+      "required": [
+        "query",
+      ],
+      "type": "object",
+    },
+    "name": "twitter_search",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "fetchedAt": {
+          "type": "string",
+        },
+        "link": {
+          "type": "string",
+        },
+        "nextCursor": {
+          "type": "string",
+        },
+        "pagination": {
+          "const": "cursor",
+          "type": "string",
+        },
+        "query": {
+          "type": "string",
+        },
+        "returnedCount": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer",
+        },
+        "sourceCount": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer",
+        },
+        "truncated": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "type": "boolean",
+            },
+            "items": {
+              "type": "boolean",
+            },
+            "text": {
+              "type": "boolean",
+            },
+          },
+          "required": [
+            "items",
+            "bytes",
+            "text",
+          ],
+          "type": "object",
+        },
+        "tweets": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "author": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                  },
+                  "name": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+              "createdAt": {
+                "type": "string",
+              },
+              "hashtags": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "id": {
+                "type": "string",
+              },
+              "isPinned": {
+                "type": "boolean",
+              },
+              "isQuote": {
+                "type": "boolean",
+              },
+              "isReply": {
+                "type": "boolean",
+              },
+              "isRetweet": {
+                "type": "boolean",
+              },
+              "lang": {
+                "type": "string",
+              },
+              "links": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "media": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "height": {
+                      "type": "number",
+                    },
+                    "previewUrl": {
+                      "type": "string",
+                    },
+                    "type": {
+                      "enum": [
+                        "photo",
+                        "video",
+                        "animated_gif",
+                      ],
+                      "type": "string",
+                    },
+                    "url": {
+                      "type": "string",
+                    },
+                    "width": {
+                      "type": "number",
+                    },
+                  },
+                  "required": [
+                    "type",
+                    "url",
+                  ],
+                  "type": "object",
+                },
+                "type": "array",
+              },
+              "mentions": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "metrics": {
+                "additionalProperties": false,
+                "properties": {
+                  "likes": {
+                    "type": "number",
+                  },
+                  "quotes": {
+                    "type": "number",
+                  },
+                  "replies": {
+                    "type": "number",
+                  },
+                  "retweets": {
+                    "type": "number",
+                  },
+                },
+                "type": "object",
+              },
+              "quoted": {
+                "additionalProperties": false,
+                "properties": {
+                  "author": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                      },
+                      "name": {
+                        "type": "string",
+                      },
+                      "username": {
+                        "type": "string",
+                      },
+                    },
+                    "type": "object",
+                  },
+                  "createdAt": {
+                    "type": "string",
+                  },
+                  "id": {
+                    "type": "string",
+                  },
+                  "links": {
+                    "items": {
+                      "type": "string",
+                    },
+                    "type": "array",
+                  },
+                  "media": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "height": {
+                          "type": "number",
+                        },
+                        "previewUrl": {
+                          "type": "string",
+                        },
+                        "type": {
+                          "enum": [
+                            "photo",
+                            "video",
+                            "animated_gif",
+                          ],
+                          "type": "string",
+                        },
+                        "url": {
+                          "type": "string",
+                        },
+                        "width": {
+                          "type": "number",
+                        },
+                      },
+                      "required": [
+                        "type",
+                        "url",
+                      ],
+                      "type": "object",
+                    },
+                    "type": "array",
+                  },
+                  "text": {
+                    "maxLength": 4000,
+                    "type": "string",
+                  },
+                  "textTruncated": {
+                    "type": "boolean",
+                  },
+                  "url": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "id",
+                  "url",
+                  "text",
+                  "textTruncated",
+                  "media",
+                  "links",
+                ],
+                "type": "object",
+              },
+              "replyTo": {
+                "additionalProperties": false,
+                "properties": {
+                  "tweetId": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "tweetId",
+                ],
+                "type": "object",
+              },
+              "retweetedBy": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                  },
+                  "name": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+              "text": {
+                "maxLength": 4000,
+                "type": "string",
+              },
+              "textTruncated": {
+                "type": "boolean",
+              },
+              "url": {
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "url",
+              "text",
+              "textTruncated",
+              "media",
+              "links",
+              "isRetweet",
+              "isReply",
+              "isQuote",
+              "hashtags",
+              "mentions",
+              "metrics",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+      },
+      "required": [
+        "returnedCount",
+        "sourceCount",
+        "truncated",
+        "fetchedAt",
+        "link",
+        "pagination",
+        "query",
+        "tweets",
+      ],
+      "type": "object",
+    },
+    "title": "Search X posts",
+  },
+  {
+    "annotations": {
+      "openWorldHint": true,
+      "readOnlyHint": true,
+    },
+    "description": "Get recent posts from one X user's profile timeline (up to \`limit\` from one upstream page), plus the user's profile. The pinned post may appear first on the first page and is flagged \`isPinned\`. To get older posts, pass the result's \`nextCursor\` as \`cursor\` with the same \`user\` and \`includeReplies\`. A missing \`nextCursor\` means there are no more results. Every call is a fresh read. Requires TWITTER_AUTH_TOKEN, TWITTER_THIRD_PARTY_API, or TWITTER_CONSUMER_KEY + TWITTER_CONSUMER_SECRET.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "cursor": {
+          "description": "Opaque \`nextCursor\` from an earlier \`twitter_user_tweets\` result with the same \`user\` and \`includeReplies\`. Omit it to get the newest posts. \`limit\` and \`includeRetweets\` may differ between pages.",
+          "maxLength": 4096,
+          "pattern": "^v1\\.[A-Za-z0-9_-]+$",
+          "type": "string",
+        },
+        "includeReplies": {
+          "default": false,
+          "description": "Include the user's replies (X's 'Posts & replies' timeline). Default false returns only root posts.",
+          "type": "boolean",
+        },
+        "includeRetweets": {
+          "default": true,
+          "description": "Include reposts. Default true. The filter is applied after fetching the single upstream page, so fewer than \`limit\` posts may be returned.",
+          "type": "boolean",
+        },
+        "limit": {
+          "default": 20,
+          "description": "Maximum posts to return, 1–20. Default 20.",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer",
+        },
+        "user": {
+          "description": "X handle without @ (e.g. \`DIYgod\`; a leading @ is removed), or \`+\` followed by the numeric user ID (e.g. \`+44196397\`).",
+          "pattern": "^(?:@?[A-Za-z0-9_]{1,15}|\\+[0-9]{1,20})$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "user",
+      ],
+      "type": "object",
+    },
+    "name": "twitter_user_tweets",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "fetchedAt": {
+          "type": "string",
+        },
+        "link": {
+          "type": "string",
+        },
+        "nextCursor": {
+          "type": "string",
+        },
+        "pagination": {
+          "const": "cursor",
+          "type": "string",
+        },
+        "returnedCount": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer",
+        },
+        "sourceCount": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer",
+        },
+        "truncated": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "type": "boolean",
+            },
+            "items": {
+              "type": "boolean",
+            },
+            "text": {
+              "type": "boolean",
+            },
+          },
+          "required": [
+            "items",
+            "bytes",
+            "text",
+          ],
+          "type": "object",
+        },
+        "tweets": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "author": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                  },
+                  "name": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+              "createdAt": {
+                "type": "string",
+              },
+              "hashtags": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "id": {
+                "type": "string",
+              },
+              "isPinned": {
+                "type": "boolean",
+              },
+              "isQuote": {
+                "type": "boolean",
+              },
+              "isReply": {
+                "type": "boolean",
+              },
+              "isRetweet": {
+                "type": "boolean",
+              },
+              "lang": {
+                "type": "string",
+              },
+              "links": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "media": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "height": {
+                      "type": "number",
+                    },
+                    "previewUrl": {
+                      "type": "string",
+                    },
+                    "type": {
+                      "enum": [
+                        "photo",
+                        "video",
+                        "animated_gif",
+                      ],
+                      "type": "string",
+                    },
+                    "url": {
+                      "type": "string",
+                    },
+                    "width": {
+                      "type": "number",
+                    },
+                  },
+                  "required": [
+                    "type",
+                    "url",
+                  ],
+                  "type": "object",
+                },
+                "type": "array",
+              },
+              "mentions": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "metrics": {
+                "additionalProperties": false,
+                "properties": {
+                  "likes": {
+                    "type": "number",
+                  },
+                  "quotes": {
+                    "type": "number",
+                  },
+                  "replies": {
+                    "type": "number",
+                  },
+                  "retweets": {
+                    "type": "number",
+                  },
+                },
+                "type": "object",
+              },
+              "quoted": {
+                "additionalProperties": false,
+                "properties": {
+                  "author": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                      },
+                      "name": {
+                        "type": "string",
+                      },
+                      "username": {
+                        "type": "string",
+                      },
+                    },
+                    "type": "object",
+                  },
+                  "createdAt": {
+                    "type": "string",
+                  },
+                  "id": {
+                    "type": "string",
+                  },
+                  "links": {
+                    "items": {
+                      "type": "string",
+                    },
+                    "type": "array",
+                  },
+                  "media": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "height": {
+                          "type": "number",
+                        },
+                        "previewUrl": {
+                          "type": "string",
+                        },
+                        "type": {
+                          "enum": [
+                            "photo",
+                            "video",
+                            "animated_gif",
+                          ],
+                          "type": "string",
+                        },
+                        "url": {
+                          "type": "string",
+                        },
+                        "width": {
+                          "type": "number",
+                        },
+                      },
+                      "required": [
+                        "type",
+                        "url",
+                      ],
+                      "type": "object",
+                    },
+                    "type": "array",
+                  },
+                  "text": {
+                    "maxLength": 4000,
+                    "type": "string",
+                  },
+                  "textTruncated": {
+                    "type": "boolean",
+                  },
+                  "url": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "id",
+                  "url",
+                  "text",
+                  "textTruncated",
+                  "media",
+                  "links",
+                ],
+                "type": "object",
+              },
+              "replyTo": {
+                "additionalProperties": false,
+                "properties": {
+                  "tweetId": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "tweetId",
+                ],
+                "type": "object",
+              },
+              "retweetedBy": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                  },
+                  "name": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+              "text": {
+                "maxLength": 4000,
+                "type": "string",
+              },
+              "textTruncated": {
+                "type": "boolean",
+              },
+              "url": {
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "url",
+              "text",
+              "textTruncated",
+              "media",
+              "links",
+              "isRetweet",
+              "isReply",
+              "isQuote",
+              "hashtags",
+              "mentions",
+              "metrics",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "user": {
+          "additionalProperties": false,
+          "properties": {
+            "description": {
+              "type": "string",
+            },
+            "id": {
+              "type": "string",
+            },
+            "name": {
+              "type": "string",
+            },
+            "profileImageUrl": {
+              "type": "string",
+            },
+            "url": {
+              "type": "string",
+            },
+            "username": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "username",
+            "url",
+          ],
+          "type": "object",
+        },
+      },
+      "required": [
+        "returnedCount",
+        "sourceCount",
+        "truncated",
+        "fetchedAt",
+        "link",
+        "pagination",
+        "user",
+        "tweets",
+      ],
+      "type": "object",
+    },
+    "title": "Get an X user's posts",
+  },
+  {
+    "annotations": {
+      "openWorldHint": true,
+      "readOnlyHint": true,
+    },
+    "description": "Get one X post by author handle and post ID, plus the conversation posts X returns with it (ancestors and replies from a single page; none on the developer-API backend). Every call is a fresh read. Requires TWITTER_AUTH_TOKEN (web backend) or TWITTER_CONSUMER_KEY + TWITTER_CONSUMER_SECRET. TWITTER_THIRD_PARTY_API alone is not enough.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "default": 20,
+          "description": "Maximum conversation posts in \`thread\`, 1–20. Default 20. The requested post is always returned.",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer",
+        },
+        "tweetId": {
+          "description": "Numeric post ID from \`x.com/<user>/status/<tweetId>\`.",
+          "pattern": "^[0-9]{1,20}$",
+          "type": "string",
+        },
+        "user": {
+          "description": "Author handle without @ or \`+numericId\`, taken from \`x.com/<user>/status/<tweetId>\`.",
+          "pattern": "^(?:@?[A-Za-z0-9_]{1,15}|\\+[0-9]{1,20})$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "user",
+        "tweetId",
+      ],
+      "type": "object",
+    },
+    "name": "twitter_get_tweet",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "fetchedAt": {
+          "type": "string",
+        },
+        "link": {
+          "type": "string",
+        },
+        "pagination": {
+          "const": "none",
+          "type": "string",
+        },
+        "returnedCount": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer",
+        },
+        "sourceCount": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer",
+        },
+        "thread": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "author": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                  },
+                  "name": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+              "createdAt": {
+                "type": "string",
+              },
+              "hashtags": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "id": {
+                "type": "string",
+              },
+              "isPinned": {
+                "type": "boolean",
+              },
+              "isQuote": {
+                "type": "boolean",
+              },
+              "isReply": {
+                "type": "boolean",
+              },
+              "isRetweet": {
+                "type": "boolean",
+              },
+              "lang": {
+                "type": "string",
+              },
+              "links": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "media": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "height": {
+                      "type": "number",
+                    },
+                    "previewUrl": {
+                      "type": "string",
+                    },
+                    "type": {
+                      "enum": [
+                        "photo",
+                        "video",
+                        "animated_gif",
+                      ],
+                      "type": "string",
+                    },
+                    "url": {
+                      "type": "string",
+                    },
+                    "width": {
+                      "type": "number",
+                    },
+                  },
+                  "required": [
+                    "type",
+                    "url",
+                  ],
+                  "type": "object",
+                },
+                "type": "array",
+              },
+              "mentions": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "metrics": {
+                "additionalProperties": false,
+                "properties": {
+                  "likes": {
+                    "type": "number",
+                  },
+                  "quotes": {
+                    "type": "number",
+                  },
+                  "replies": {
+                    "type": "number",
+                  },
+                  "retweets": {
+                    "type": "number",
+                  },
+                },
+                "type": "object",
+              },
+              "quoted": {
+                "additionalProperties": false,
+                "properties": {
+                  "author": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                      },
+                      "name": {
+                        "type": "string",
+                      },
+                      "username": {
+                        "type": "string",
+                      },
+                    },
+                    "type": "object",
+                  },
+                  "createdAt": {
+                    "type": "string",
+                  },
+                  "id": {
+                    "type": "string",
+                  },
+                  "links": {
+                    "items": {
+                      "type": "string",
+                    },
+                    "type": "array",
+                  },
+                  "media": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "height": {
+                          "type": "number",
+                        },
+                        "previewUrl": {
+                          "type": "string",
+                        },
+                        "type": {
+                          "enum": [
+                            "photo",
+                            "video",
+                            "animated_gif",
+                          ],
+                          "type": "string",
+                        },
+                        "url": {
+                          "type": "string",
+                        },
+                        "width": {
+                          "type": "number",
+                        },
+                      },
+                      "required": [
+                        "type",
+                        "url",
+                      ],
+                      "type": "object",
+                    },
+                    "type": "array",
+                  },
+                  "text": {
+                    "maxLength": 4000,
+                    "type": "string",
+                  },
+                  "textTruncated": {
+                    "type": "boolean",
+                  },
+                  "url": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "id",
+                  "url",
+                  "text",
+                  "textTruncated",
+                  "media",
+                  "links",
+                ],
+                "type": "object",
+              },
+              "replyTo": {
+                "additionalProperties": false,
+                "properties": {
+                  "tweetId": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "tweetId",
+                ],
+                "type": "object",
+              },
+              "retweetedBy": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                  },
+                  "name": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+              "text": {
+                "maxLength": 4000,
+                "type": "string",
+              },
+              "textTruncated": {
+                "type": "boolean",
+              },
+              "url": {
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "url",
+              "text",
+              "textTruncated",
+              "media",
+              "links",
+              "isRetweet",
+              "isReply",
+              "isQuote",
+              "hashtags",
+              "mentions",
+              "metrics",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "truncated": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "type": "boolean",
+            },
+            "items": {
+              "type": "boolean",
+            },
+            "text": {
+              "type": "boolean",
+            },
+          },
+          "required": [
+            "items",
+            "bytes",
+            "text",
+          ],
+          "type": "object",
+        },
+        "tweet": {
+          "additionalProperties": false,
+          "properties": {
+            "author": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                },
+                "name": {
+                  "type": "string",
+                },
+                "username": {
+                  "type": "string",
+                },
+              },
+              "type": "object",
+            },
+            "createdAt": {
+              "type": "string",
+            },
+            "hashtags": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "id": {
+              "type": "string",
+            },
+            "isPinned": {
+              "type": "boolean",
+            },
+            "isQuote": {
+              "type": "boolean",
+            },
+            "isReply": {
+              "type": "boolean",
+            },
+            "isRetweet": {
+              "type": "boolean",
+            },
+            "lang": {
+              "type": "string",
+            },
+            "links": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "media": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "height": {
+                    "type": "number",
+                  },
+                  "previewUrl": {
+                    "type": "string",
+                  },
+                  "type": {
+                    "enum": [
+                      "photo",
+                      "video",
+                      "animated_gif",
+                    ],
+                    "type": "string",
+                  },
+                  "url": {
+                    "type": "string",
+                  },
+                  "width": {
+                    "type": "number",
+                  },
+                },
+                "required": [
+                  "type",
+                  "url",
+                ],
+                "type": "object",
+              },
+              "type": "array",
+            },
+            "mentions": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "metrics": {
+              "additionalProperties": false,
+              "properties": {
+                "likes": {
+                  "type": "number",
+                },
+                "quotes": {
+                  "type": "number",
+                },
+                "replies": {
+                  "type": "number",
+                },
+                "retweets": {
+                  "type": "number",
+                },
+              },
+              "type": "object",
+            },
+            "quoted": {
+              "additionalProperties": false,
+              "properties": {
+                "author": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                    },
+                    "name": {
+                      "type": "string",
+                    },
+                    "username": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+                "createdAt": {
+                  "type": "string",
+                },
+                "id": {
+                  "type": "string",
+                },
+                "links": {
+                  "items": {
+                    "type": "string",
+                  },
+                  "type": "array",
+                },
+                "media": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "height": {
+                        "type": "number",
+                      },
+                      "previewUrl": {
+                        "type": "string",
+                      },
+                      "type": {
+                        "enum": [
+                          "photo",
+                          "video",
+                          "animated_gif",
+                        ],
+                        "type": "string",
+                      },
+                      "url": {
+                        "type": "string",
+                      },
+                      "width": {
+                        "type": "number",
+                      },
+                    },
+                    "required": [
+                      "type",
+                      "url",
+                    ],
+                    "type": "object",
+                  },
+                  "type": "array",
+                },
+                "text": {
+                  "maxLength": 4000,
+                  "type": "string",
+                },
+                "textTruncated": {
+                  "type": "boolean",
+                },
+                "url": {
+                  "type": "string",
+                },
+              },
+              "required": [
+                "id",
+                "url",
+                "text",
+                "textTruncated",
+                "media",
+                "links",
+              ],
+              "type": "object",
+            },
+            "replyTo": {
+              "additionalProperties": false,
+              "properties": {
+                "tweetId": {
+                  "type": "string",
+                },
+                "username": {
+                  "type": "string",
+                },
+              },
+              "required": [
+                "tweetId",
+              ],
+              "type": "object",
+            },
+            "retweetedBy": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                },
+                "name": {
+                  "type": "string",
+                },
+                "username": {
+                  "type": "string",
+                },
+              },
+              "type": "object",
+            },
+            "text": {
+              "maxLength": 4000,
+              "type": "string",
+            },
+            "textTruncated": {
+              "type": "boolean",
+            },
+            "url": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "url",
+            "text",
+            "textTruncated",
+            "media",
+            "links",
+            "isRetweet",
+            "isReply",
+            "isQuote",
+            "hashtags",
+            "mentions",
+            "metrics",
+          ],
+          "type": "object",
+        },
+      },
+      "required": [
+        "returnedCount",
+        "sourceCount",
+        "truncated",
+        "fetchedAt",
+        "link",
+        "pagination",
+        "tweet",
+        "thread",
+      ],
+      "type": "object",
+    },
+    "title": "Get an X post",
+  },
+]
+`;
+
+exports[`Twitter MCP catalog modern=true > exposes exactly the three typed Twitter tools and rejects removed tools 1`] = `
+[
+  {
+    "annotations": {
+      "openWorldHint": true,
+      "readOnlyHint": true,
+    },
+    "description": "Search recent X (Twitter) posts, newest first, through RSSHub's configured Twitter backend. \`query\` is sent verbatim to X search; it is not URL-encoded or rewritten. Returns up to \`limit\` posts from one upstream page. To get older posts, pass the result's \`nextCursor\` as \`cursor\` with the same \`query\`. A missing \`nextCursor\` means there are no more results. Every call is a fresh read. Requires RSSHub Twitter credentials: TWITTER_AUTH_TOKEN, TWITTER_THIRD_PARTY_API, or TWITTER_CONSUMER_KEY + TWITTER_CONSUMER_SECRET (developer API, last 7 days only).",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "cursor": {
+          "description": "Opaque \`nextCursor\` from an earlier \`twitter_search\` result with the same \`query\`. Omit it to get the newest posts. \`limit\` may differ between pages.",
+          "maxLength": 4096,
+          "pattern": "^v1\\.[A-Za-z0-9_-]+$",
+          "type": "string",
+        },
+        "limit": {
+          "default": 20,
+          "description": "Maximum posts to return, 1–20. Default 20.",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer",
+        },
+        "query": {
+          "description": "X search expression (1–512 characters), using the same syntax as the x.com search box. Examples: \`RSSHub\`, \`from:DIYgod RSSHub\`, \`"exact phrase"\`, \`rsshub OR miniflux\`, \`rsshub -bot\`, \`lang:en rsshub\`. X interprets the operators; RSSHub does not validate them. Operator support depends on X and on the configured backend.",
+          "maxLength": 512,
+          "minLength": 1,
+          "type": "string",
+        },
+      },
+      "required": [
+        "query",
+      ],
+      "type": "object",
+    },
+    "name": "twitter_search",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "fetchedAt": {
+          "type": "string",
+        },
+        "link": {
+          "type": "string",
+        },
+        "nextCursor": {
+          "type": "string",
+        },
+        "pagination": {
+          "const": "cursor",
+          "type": "string",
+        },
+        "query": {
+          "type": "string",
+        },
+        "returnedCount": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer",
+        },
+        "sourceCount": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer",
+        },
+        "truncated": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "type": "boolean",
+            },
+            "items": {
+              "type": "boolean",
+            },
+            "text": {
+              "type": "boolean",
+            },
+          },
+          "required": [
+            "items",
+            "bytes",
+            "text",
+          ],
+          "type": "object",
+        },
+        "tweets": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "author": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                  },
+                  "name": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+              "createdAt": {
+                "type": "string",
+              },
+              "hashtags": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "id": {
+                "type": "string",
+              },
+              "isPinned": {
+                "type": "boolean",
+              },
+              "isQuote": {
+                "type": "boolean",
+              },
+              "isReply": {
+                "type": "boolean",
+              },
+              "isRetweet": {
+                "type": "boolean",
+              },
+              "lang": {
+                "type": "string",
+              },
+              "links": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "media": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "height": {
+                      "type": "number",
+                    },
+                    "previewUrl": {
+                      "type": "string",
+                    },
+                    "type": {
+                      "enum": [
+                        "photo",
+                        "video",
+                        "animated_gif",
+                      ],
+                      "type": "string",
+                    },
+                    "url": {
+                      "type": "string",
+                    },
+                    "width": {
+                      "type": "number",
+                    },
+                  },
+                  "required": [
+                    "type",
+                    "url",
+                  ],
+                  "type": "object",
+                },
+                "type": "array",
+              },
+              "mentions": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "metrics": {
+                "additionalProperties": false,
+                "properties": {
+                  "likes": {
+                    "type": "number",
+                  },
+                  "quotes": {
+                    "type": "number",
+                  },
+                  "replies": {
+                    "type": "number",
+                  },
+                  "retweets": {
+                    "type": "number",
+                  },
+                },
+                "type": "object",
+              },
+              "quoted": {
+                "additionalProperties": false,
+                "properties": {
+                  "author": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                      },
+                      "name": {
+                        "type": "string",
+                      },
+                      "username": {
+                        "type": "string",
+                      },
+                    },
+                    "type": "object",
+                  },
+                  "createdAt": {
+                    "type": "string",
+                  },
+                  "id": {
+                    "type": "string",
+                  },
+                  "links": {
+                    "items": {
+                      "type": "string",
+                    },
+                    "type": "array",
+                  },
+                  "media": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "height": {
+                          "type": "number",
+                        },
+                        "previewUrl": {
+                          "type": "string",
+                        },
+                        "type": {
+                          "enum": [
+                            "photo",
+                            "video",
+                            "animated_gif",
+                          ],
+                          "type": "string",
+                        },
+                        "url": {
+                          "type": "string",
+                        },
+                        "width": {
+                          "type": "number",
+                        },
+                      },
+                      "required": [
+                        "type",
+                        "url",
+                      ],
+                      "type": "object",
+                    },
+                    "type": "array",
+                  },
+                  "text": {
+                    "maxLength": 4000,
+                    "type": "string",
+                  },
+                  "textTruncated": {
+                    "type": "boolean",
+                  },
+                  "url": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "id",
+                  "url",
+                  "text",
+                  "textTruncated",
+                  "media",
+                  "links",
+                ],
+                "type": "object",
+              },
+              "replyTo": {
+                "additionalProperties": false,
+                "properties": {
+                  "tweetId": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "tweetId",
+                ],
+                "type": "object",
+              },
+              "retweetedBy": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                  },
+                  "name": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+              "text": {
+                "maxLength": 4000,
+                "type": "string",
+              },
+              "textTruncated": {
+                "type": "boolean",
+              },
+              "url": {
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "url",
+              "text",
+              "textTruncated",
+              "media",
+              "links",
+              "isRetweet",
+              "isReply",
+              "isQuote",
+              "hashtags",
+              "mentions",
+              "metrics",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+      },
+      "required": [
+        "returnedCount",
+        "sourceCount",
+        "truncated",
+        "fetchedAt",
+        "link",
+        "pagination",
+        "query",
+        "tweets",
+      ],
+      "type": "object",
+    },
+    "title": "Search X posts",
+  },
+  {
+    "annotations": {
+      "openWorldHint": true,
+      "readOnlyHint": true,
+    },
+    "description": "Get recent posts from one X user's profile timeline (up to \`limit\` from one upstream page), plus the user's profile. The pinned post may appear first on the first page and is flagged \`isPinned\`. To get older posts, pass the result's \`nextCursor\` as \`cursor\` with the same \`user\` and \`includeReplies\`. A missing \`nextCursor\` means there are no more results. Every call is a fresh read. Requires TWITTER_AUTH_TOKEN, TWITTER_THIRD_PARTY_API, or TWITTER_CONSUMER_KEY + TWITTER_CONSUMER_SECRET.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "cursor": {
+          "description": "Opaque \`nextCursor\` from an earlier \`twitter_user_tweets\` result with the same \`user\` and \`includeReplies\`. Omit it to get the newest posts. \`limit\` and \`includeRetweets\` may differ between pages.",
+          "maxLength": 4096,
+          "pattern": "^v1\\.[A-Za-z0-9_-]+$",
+          "type": "string",
+        },
+        "includeReplies": {
+          "default": false,
+          "description": "Include the user's replies (X's 'Posts & replies' timeline). Default false returns only root posts.",
+          "type": "boolean",
+        },
+        "includeRetweets": {
+          "default": true,
+          "description": "Include reposts. Default true. The filter is applied after fetching the single upstream page, so fewer than \`limit\` posts may be returned.",
+          "type": "boolean",
+        },
+        "limit": {
+          "default": 20,
+          "description": "Maximum posts to return, 1–20. Default 20.",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer",
+        },
+        "user": {
+          "description": "X handle without @ (e.g. \`DIYgod\`; a leading @ is removed), or \`+\` followed by the numeric user ID (e.g. \`+44196397\`).",
+          "pattern": "^(?:@?[A-Za-z0-9_]{1,15}|\\+[0-9]{1,20})$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "user",
+      ],
+      "type": "object",
+    },
+    "name": "twitter_user_tweets",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "fetchedAt": {
+          "type": "string",
+        },
+        "link": {
+          "type": "string",
+        },
+        "nextCursor": {
+          "type": "string",
+        },
+        "pagination": {
+          "const": "cursor",
+          "type": "string",
+        },
+        "returnedCount": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer",
+        },
+        "sourceCount": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer",
+        },
+        "truncated": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "type": "boolean",
+            },
+            "items": {
+              "type": "boolean",
+            },
+            "text": {
+              "type": "boolean",
+            },
+          },
+          "required": [
+            "items",
+            "bytes",
+            "text",
+          ],
+          "type": "object",
+        },
+        "tweets": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "author": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                  },
+                  "name": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+              "createdAt": {
+                "type": "string",
+              },
+              "hashtags": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "id": {
+                "type": "string",
+              },
+              "isPinned": {
+                "type": "boolean",
+              },
+              "isQuote": {
+                "type": "boolean",
+              },
+              "isReply": {
+                "type": "boolean",
+              },
+              "isRetweet": {
+                "type": "boolean",
+              },
+              "lang": {
+                "type": "string",
+              },
+              "links": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "media": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "height": {
+                      "type": "number",
+                    },
+                    "previewUrl": {
+                      "type": "string",
+                    },
+                    "type": {
+                      "enum": [
+                        "photo",
+                        "video",
+                        "animated_gif",
+                      ],
+                      "type": "string",
+                    },
+                    "url": {
+                      "type": "string",
+                    },
+                    "width": {
+                      "type": "number",
+                    },
+                  },
+                  "required": [
+                    "type",
+                    "url",
+                  ],
+                  "type": "object",
+                },
+                "type": "array",
+              },
+              "mentions": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "metrics": {
+                "additionalProperties": false,
+                "properties": {
+                  "likes": {
+                    "type": "number",
+                  },
+                  "quotes": {
+                    "type": "number",
+                  },
+                  "replies": {
+                    "type": "number",
+                  },
+                  "retweets": {
+                    "type": "number",
+                  },
+                },
+                "type": "object",
+              },
+              "quoted": {
+                "additionalProperties": false,
+                "properties": {
+                  "author": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                      },
+                      "name": {
+                        "type": "string",
+                      },
+                      "username": {
+                        "type": "string",
+                      },
+                    },
+                    "type": "object",
+                  },
+                  "createdAt": {
+                    "type": "string",
+                  },
+                  "id": {
+                    "type": "string",
+                  },
+                  "links": {
+                    "items": {
+                      "type": "string",
+                    },
+                    "type": "array",
+                  },
+                  "media": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "height": {
+                          "type": "number",
+                        },
+                        "previewUrl": {
+                          "type": "string",
+                        },
+                        "type": {
+                          "enum": [
+                            "photo",
+                            "video",
+                            "animated_gif",
+                          ],
+                          "type": "string",
+                        },
+                        "url": {
+                          "type": "string",
+                        },
+                        "width": {
+                          "type": "number",
+                        },
+                      },
+                      "required": [
+                        "type",
+                        "url",
+                      ],
+                      "type": "object",
+                    },
+                    "type": "array",
+                  },
+                  "text": {
+                    "maxLength": 4000,
+                    "type": "string",
+                  },
+                  "textTruncated": {
+                    "type": "boolean",
+                  },
+                  "url": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "id",
+                  "url",
+                  "text",
+                  "textTruncated",
+                  "media",
+                  "links",
+                ],
+                "type": "object",
+              },
+              "replyTo": {
+                "additionalProperties": false,
+                "properties": {
+                  "tweetId": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "tweetId",
+                ],
+                "type": "object",
+              },
+              "retweetedBy": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                  },
+                  "name": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+              "text": {
+                "maxLength": 4000,
+                "type": "string",
+              },
+              "textTruncated": {
+                "type": "boolean",
+              },
+              "url": {
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "url",
+              "text",
+              "textTruncated",
+              "media",
+              "links",
+              "isRetweet",
+              "isReply",
+              "isQuote",
+              "hashtags",
+              "mentions",
+              "metrics",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "user": {
+          "additionalProperties": false,
+          "properties": {
+            "description": {
+              "type": "string",
+            },
+            "id": {
+              "type": "string",
+            },
+            "name": {
+              "type": "string",
+            },
+            "profileImageUrl": {
+              "type": "string",
+            },
+            "url": {
+              "type": "string",
+            },
+            "username": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "username",
+            "url",
+          ],
+          "type": "object",
+        },
+      },
+      "required": [
+        "returnedCount",
+        "sourceCount",
+        "truncated",
+        "fetchedAt",
+        "link",
+        "pagination",
+        "user",
+        "tweets",
+      ],
+      "type": "object",
+    },
+    "title": "Get an X user's posts",
+  },
+  {
+    "annotations": {
+      "openWorldHint": true,
+      "readOnlyHint": true,
+    },
+    "description": "Get one X post by author handle and post ID, plus the conversation posts X returns with it (ancestors and replies from a single page; none on the developer-API backend). Every call is a fresh read. Requires TWITTER_AUTH_TOKEN (web backend) or TWITTER_CONSUMER_KEY + TWITTER_CONSUMER_SECRET. TWITTER_THIRD_PARTY_API alone is not enough.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "default": 20,
+          "description": "Maximum conversation posts in \`thread\`, 1–20. Default 20. The requested post is always returned.",
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer",
+        },
+        "tweetId": {
+          "description": "Numeric post ID from \`x.com/<user>/status/<tweetId>\`.",
+          "pattern": "^[0-9]{1,20}$",
+          "type": "string",
+        },
+        "user": {
+          "description": "Author handle without @ or \`+numericId\`, taken from \`x.com/<user>/status/<tweetId>\`.",
+          "pattern": "^(?:@?[A-Za-z0-9_]{1,15}|\\+[0-9]{1,20})$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "user",
+        "tweetId",
+      ],
+      "type": "object",
+    },
+    "name": "twitter_get_tweet",
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "fetchedAt": {
+          "type": "string",
+        },
+        "link": {
+          "type": "string",
+        },
+        "pagination": {
+          "const": "none",
+          "type": "string",
+        },
+        "returnedCount": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer",
+        },
+        "sourceCount": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer",
+        },
+        "thread": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "author": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                  },
+                  "name": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+              "createdAt": {
+                "type": "string",
+              },
+              "hashtags": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "id": {
+                "type": "string",
+              },
+              "isPinned": {
+                "type": "boolean",
+              },
+              "isQuote": {
+                "type": "boolean",
+              },
+              "isReply": {
+                "type": "boolean",
+              },
+              "isRetweet": {
+                "type": "boolean",
+              },
+              "lang": {
+                "type": "string",
+              },
+              "links": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "media": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "height": {
+                      "type": "number",
+                    },
+                    "previewUrl": {
+                      "type": "string",
+                    },
+                    "type": {
+                      "enum": [
+                        "photo",
+                        "video",
+                        "animated_gif",
+                      ],
+                      "type": "string",
+                    },
+                    "url": {
+                      "type": "string",
+                    },
+                    "width": {
+                      "type": "number",
+                    },
+                  },
+                  "required": [
+                    "type",
+                    "url",
+                  ],
+                  "type": "object",
+                },
+                "type": "array",
+              },
+              "mentions": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+              "metrics": {
+                "additionalProperties": false,
+                "properties": {
+                  "likes": {
+                    "type": "number",
+                  },
+                  "quotes": {
+                    "type": "number",
+                  },
+                  "replies": {
+                    "type": "number",
+                  },
+                  "retweets": {
+                    "type": "number",
+                  },
+                },
+                "type": "object",
+              },
+              "quoted": {
+                "additionalProperties": false,
+                "properties": {
+                  "author": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                      },
+                      "name": {
+                        "type": "string",
+                      },
+                      "username": {
+                        "type": "string",
+                      },
+                    },
+                    "type": "object",
+                  },
+                  "createdAt": {
+                    "type": "string",
+                  },
+                  "id": {
+                    "type": "string",
+                  },
+                  "links": {
+                    "items": {
+                      "type": "string",
+                    },
+                    "type": "array",
+                  },
+                  "media": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "height": {
+                          "type": "number",
+                        },
+                        "previewUrl": {
+                          "type": "string",
+                        },
+                        "type": {
+                          "enum": [
+                            "photo",
+                            "video",
+                            "animated_gif",
+                          ],
+                          "type": "string",
+                        },
+                        "url": {
+                          "type": "string",
+                        },
+                        "width": {
+                          "type": "number",
+                        },
+                      },
+                      "required": [
+                        "type",
+                        "url",
+                      ],
+                      "type": "object",
+                    },
+                    "type": "array",
+                  },
+                  "text": {
+                    "maxLength": 4000,
+                    "type": "string",
+                  },
+                  "textTruncated": {
+                    "type": "boolean",
+                  },
+                  "url": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "id",
+                  "url",
+                  "text",
+                  "textTruncated",
+                  "media",
+                  "links",
+                ],
+                "type": "object",
+              },
+              "replyTo": {
+                "additionalProperties": false,
+                "properties": {
+                  "tweetId": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "tweetId",
+                ],
+                "type": "object",
+              },
+              "retweetedBy": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                  },
+                  "name": {
+                    "type": "string",
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+              "text": {
+                "maxLength": 4000,
+                "type": "string",
+              },
+              "textTruncated": {
+                "type": "boolean",
+              },
+              "url": {
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "url",
+              "text",
+              "textTruncated",
+              "media",
+              "links",
+              "isRetweet",
+              "isReply",
+              "isQuote",
+              "hashtags",
+              "mentions",
+              "metrics",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "truncated": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "type": "boolean",
+            },
+            "items": {
+              "type": "boolean",
+            },
+            "text": {
+              "type": "boolean",
+            },
+          },
+          "required": [
+            "items",
+            "bytes",
+            "text",
+          ],
+          "type": "object",
+        },
+        "tweet": {
+          "additionalProperties": false,
+          "properties": {
+            "author": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                },
+                "name": {
+                  "type": "string",
+                },
+                "username": {
+                  "type": "string",
+                },
+              },
+              "type": "object",
+            },
+            "createdAt": {
+              "type": "string",
+            },
+            "hashtags": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "id": {
+              "type": "string",
+            },
+            "isPinned": {
+              "type": "boolean",
+            },
+            "isQuote": {
+              "type": "boolean",
+            },
+            "isReply": {
+              "type": "boolean",
+            },
+            "isRetweet": {
+              "type": "boolean",
+            },
+            "lang": {
+              "type": "string",
+            },
+            "links": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "media": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "height": {
+                    "type": "number",
+                  },
+                  "previewUrl": {
+                    "type": "string",
+                  },
+                  "type": {
+                    "enum": [
+                      "photo",
+                      "video",
+                      "animated_gif",
+                    ],
+                    "type": "string",
+                  },
+                  "url": {
+                    "type": "string",
+                  },
+                  "width": {
+                    "type": "number",
+                  },
+                },
+                "required": [
+                  "type",
+                  "url",
+                ],
+                "type": "object",
+              },
+              "type": "array",
+            },
+            "mentions": {
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "metrics": {
+              "additionalProperties": false,
+              "properties": {
+                "likes": {
+                  "type": "number",
+                },
+                "quotes": {
+                  "type": "number",
+                },
+                "replies": {
+                  "type": "number",
+                },
+                "retweets": {
+                  "type": "number",
+                },
+              },
+              "type": "object",
+            },
+            "quoted": {
+              "additionalProperties": false,
+              "properties": {
+                "author": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                    },
+                    "name": {
+                      "type": "string",
+                    },
+                    "username": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+                "createdAt": {
+                  "type": "string",
+                },
+                "id": {
+                  "type": "string",
+                },
+                "links": {
+                  "items": {
+                    "type": "string",
+                  },
+                  "type": "array",
+                },
+                "media": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "height": {
+                        "type": "number",
+                      },
+                      "previewUrl": {
+                        "type": "string",
+                      },
+                      "type": {
+                        "enum": [
+                          "photo",
+                          "video",
+                          "animated_gif",
+                        ],
+                        "type": "string",
+                      },
+                      "url": {
+                        "type": "string",
+                      },
+                      "width": {
+                        "type": "number",
+                      },
+                    },
+                    "required": [
+                      "type",
+                      "url",
+                    ],
+                    "type": "object",
+                  },
+                  "type": "array",
+                },
+                "text": {
+                  "maxLength": 4000,
+                  "type": "string",
+                },
+                "textTruncated": {
+                  "type": "boolean",
+                },
+                "url": {
+                  "type": "string",
+                },
+              },
+              "required": [
+                "id",
+                "url",
+                "text",
+                "textTruncated",
+                "media",
+                "links",
+              ],
+              "type": "object",
+            },
+            "replyTo": {
+              "additionalProperties": false,
+              "properties": {
+                "tweetId": {
+                  "type": "string",
+                },
+                "username": {
+                  "type": "string",
+                },
+              },
+              "required": [
+                "tweetId",
+              ],
+              "type": "object",
+            },
+            "retweetedBy": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                },
+                "name": {
+                  "type": "string",
+                },
+                "username": {
+                  "type": "string",
+                },
+              },
+              "type": "object",
+            },
+            "text": {
+              "maxLength": 4000,
+              "type": "string",
+            },
+            "textTruncated": {
+              "type": "boolean",
+            },
+            "url": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "id",
+            "url",
+            "text",
+            "textTruncated",
+            "media",
+            "links",
+            "isRetweet",
+            "isReply",
+            "isQuote",
+            "hashtags",
+            "mentions",
+            "metrics",
+          ],
+          "type": "object",
+        },
+      },
+      "required": [
+        "returnedCount",
+        "sourceCount",
+        "truncated",
+        "fetchedAt",
+        "link",
+        "pagination",
+        "tweet",
+        "thread",
+      ],
+      "type": "object",
+    },
+    "title": "Get an X post",
+  },
+]
+`;

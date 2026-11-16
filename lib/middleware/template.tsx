@@ -4,7 +4,6 @@ import { config } from '@/config';
 import type { Data } from '@/types';
 import cacheModule from '@/utils/cache/index';
 import { collapseWhitespace, convertDateToISO8601 } from '@/utils/common-utils';
-import { getInternalRequestState } from '@/utils/internal-request';
 import { Atom, json, RSS, rss3 } from '@/utils/render';
 
 const middleware: MiddlewareHandler = async (ctx, next) => {
@@ -106,7 +105,7 @@ const middleware: MiddlewareHandler = async (ctx, next) => {
         ...data,
     };
 
-    if (config.isPackage || getInternalRequestState(ctx)) {
+    if (config.isPackage) {
         return ctx.json(result);
     }
 

@@ -145,11 +145,3 @@ describe('template middleware', () => {
         expect(ctx.render).toHaveBeenCalled();
     });
 });
-
-it('returns raw normalized Data only for internal env marker', async () => {
-    const { createInternalRequestEnv } = await import('@/utils/internal-request');
-    const ctx = new Context(new Request('http://localhost/feed'), { env: createInternalRequestEnv({}), path: '/feed' });
-    ctx.set('data', { title: ' Feed  title ', item: [{ title: ' Article ', link: 'https://example.com/a' }] });
-    const response = await template(ctx, async () => {});
-    expect(await (response as Response).json()).toMatchObject({ title: 'Feed title', item: [{ title: 'Article' }] });
-});
