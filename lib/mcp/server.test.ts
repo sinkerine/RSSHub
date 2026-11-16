@@ -1,7 +1,17 @@
+import { setImmediate } from 'node:timers/promises';
+import { queryObjects } from 'node:v8';
+
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { Harness } from './test-harness';
 import { delay, expectHttpAbort, failureData, rawCall, search, startHarness } from './test-harness';
+
+async function collectRequestGarbage() {
+    await setImmediate();
+    // queryObjects forces full GC without runtime flags; exercise abort after intermediate Requests can be collected.
+    queryObjects(AbortController);
+    await setImmediate();
+}
 
 describe.each([false, true])('MCP admission modern=%s', (modern) => {
     let harness: Harness;
@@ -47,25 +57,49 @@ describe.each([false, true])('MCP admission modern=%s', (modern) => {
         expect(harness.upstream.hits('timeout')).toBe(2);
         expect(harness.upstream.hits('expired')).toBe(0);
     });
+});
+
+describe.each([false, true])('MCP admission modern=%s', (modern) => {
+    let harness: Harness;
+    let client;
+    beforeAll(async () => {
+        // Cancellation must win by observation, independently of the one-second deadline tests.
+        harness = await startHarness({ timeout: 30, backend: 'third-party' });
+        client = await harness.connect(modern);
+    }, 30000);
+    afterAll(async () => {
+        await harness?.close();
+    });
     it('cancel: HTTP abort removes queued task and running abort keeps slot', async () => {
         harness.upstream.hold('cancel');
         const controllerRunning = new AbortController();
-        const running = expectHttpAbort(rawCall(harness.base, 'cancel', controllerRunning.signal));
+        const runningResponse = rawCall(harness.base, 'cancel', controllerRunning.signal);
+        const running = expectHttpAbort(runningResponse);
         await harness.upstream.waitFor('cancel');
+        expect((await runningResponse).headers.get('content-type')).toBe('text/event-stream');
+        await harness.waitForAdmission({ active: 1, queued: 0 });
         const controller = new AbortController();
-        const queued = expectHttpAbort(rawCall(harness.base, 'aborted', controller.signal));
-        await delay(50);
+        const queuedResponse = rawCall(harness.base, 'aborted', controller.signal);
+        const queued = expectHttpAbort(queuedResponse);
+        expect((await queuedResponse).headers.get('content-type')).toBe('text/event-stream');
+        await harness.waitForAdmission({ active: 1, queued: 1 });
         controller.abort();
         await queued;
-        await delay(50);
+        await harness.waitForAborts(1);
+        await harness.waitForAdmission({ active: 1, queued: 0 });
+        expect(harness.upstream.hits('aborted')).toBe(0);
+        await collectRequestGarbage();
         controllerRunning.abort();
         await running;
-        await delay(50);
+        await harness.waitForAborts(2);
+        await harness.waitForAdmission({ active: 1, queued: 0 });
         const next = search(client, 'after-abort');
-        await delay(50);
+        await harness.waitForAdmission({ active: 1, queued: 1 });
         expect(harness.upstream.hits('after-abort')).toBe(0);
         harness.upstream.release('cancel');
         expect((await next).isError).not.toBe(true);
+        await harness.waitForAdmission({ active: 0, queued: 0 });
         expect(harness.upstream.hits('aborted')).toBe(0);
+        expect(harness.upstream.hits('after-abort')).toBe(1);
     });
 });

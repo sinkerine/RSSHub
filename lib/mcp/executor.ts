@@ -20,7 +20,7 @@ export interface ExecutorDeps {
 }
 export async function runTool(name: string, deps: ExecutorDeps, signals: AbortSignal[], work: () => Promise<ToolResult>, validate?: () => void): Promise<CallToolResult> {
     const started = performance.now();
-    let status: McpErrorCode | 'ok' = 'ok';
+    let status: McpErrorCode | 'ok' | 'cancelled' = 'ok';
     let deadline: AbortSignal | undefined;
     try {
         validate?.();
@@ -40,7 +40,7 @@ export async function runTool(name: string, deps: ExecutorDeps, signals: AbortSi
         return { structuredContent: result, content: [{ type: 'text', text: JSON.stringify(result) }] };
     } catch (error) {
         if (error instanceof LimiterAbortError && !deadline?.aborted) {
-            status = 'internal_error';
+            status = 'cancelled';
             throw error;
         }
         const failure =

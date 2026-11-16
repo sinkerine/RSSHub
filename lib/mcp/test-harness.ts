@@ -7,10 +7,12 @@ import { serve } from '@hono/node-server';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import type { CallToolResult } from '@modelcontextprotocol/server';
 import type * as Undici from 'undici';
+import { fetch as httpFetch } from 'undici';
 import { expect, vi } from 'vitest';
 import { z } from 'zod';
 
 import { startTwitterFixtureUpstream } from '../../scripts/e2e/fixture-upstream.mjs';
+import type { Limiter } from './limiter';
 
 export const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -39,7 +41,12 @@ export async function startHarness(
     vi.stubEnv('MCP_MAX_QUEUE', '1');
     vi.stubEnv('MCP_MAX_RESPONSE_BYTES', String(options.maxResponseBytes ?? 262144));
     vi.stubEnv('MCP_ALLOWED_ORIGINS', options.origins ?? 'https://allowed.example');
+    const limiterFactory = vi.spyOn(await import('./limiter'), 'createLimiter');
     const { default: app } = await import('@/app');
+    const limiter = limiterFactory.mock.results[0]?.value as Limiter | undefined;
+    limiterFactory.mockRestore();
+    // Observe the real limiter without replacing its admission or cancellation behavior.
+    const admission = limiter && vi.spyOn(limiter, 'run');
     const { default: cache } = await import('@/utils/cache');
     await cache.set('twitter:gql-query-ids', JSON.stringify((await import('@/routes/twitter/api/web-api/gql-id-resolver')).fallbackIds), 3600);
     if (options.backend === 'web') {
@@ -83,7 +90,14 @@ export async function startHarness(
         upstream,
         connect,
         bodies,
+        async waitForAdmission(expected: { active: number; queued: number }) {
+            await vi.waitFor(() => expect(limiter?.stats()).toMatchObject(expected));
+        },
+        async waitForAborts(count: number) {
+            await vi.waitFor(() => expect(admission?.mock.calls.filter(([, signal]) => signal.aborted)).toHaveLength(count));
+        },
         async close() {
+            admission?.mockRestore();
             // Release held routes before closing HTTP and cache connections.
             await upstream.close();
             await Promise.all(clients.map((client) => client.close()));
@@ -100,7 +114,8 @@ export async function startHarness(
 export type Harness = Awaited<ReturnType<typeof startHarness>>;
 export const search = (client: Client, query: string, args = {}) => client.callTool({ name: 'twitter_search', arguments: { query, ...args } });
 export function rawCall(base: string, query: string, signal?: AbortSignal) {
-    return fetch(`${base}/mcp`, {
+    // Inbound test traffic must not pass through the app's outbound Request/signal rewriting.
+    return httpFetch(`${base}/mcp`, {
         method: 'POST',
         signal,
         headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream', 'mcp-protocol-version': '2025-11-25' },
@@ -119,11 +134,11 @@ export function textContent(result: CallToolResult) {
     return block.text;
 }
 
-export async function expectHttpAbort(pending: Promise<Response>) {
+export async function expectHttpAbort(pending: Promise<Undici.Response>) {
     try {
         const response = await pending;
         await response.text();
-        throw new Error('Expected HTTP request to abort');
+        throw new Error(`Expected HTTP request to abort; completed ${response.status} ${response.headers.get('content-type')}`);
     } catch (error) {
         expect(error).toMatchObject({ name: 'AbortError' });
     }
