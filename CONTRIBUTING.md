@@ -1,5 +1,14 @@
 ## Please refer to [Join Us](https://docs.rsshub.app/joinus/)
 
+With Nix and nix-direnv installed, run `direnv allow`, then `rsshub-setup`.
+Alternatively enter with `nix develop --impure`. The pinned shell provides Node,
+pnpm and Chromium; it starts no services and installs nothing on entry.
+`rsshub-dev` starts the development server and `rsshub-e2e` runs an isolated
+HTTP/browser smoke test through the host’s shared `agent-job`/qex queue.
+The queue tools must be installed on the host; the flake does not install its own
+scheduler. Commit hooks automatically enter the development environment when a\nGUI Git client cannot find pnpm; allow direnv and run setup before committing.\nWhen the host has qex installed, each hook requests its resource profile.\nSee [AGENTS.md](./AGENTS.md#development-environment-and-e2e) for scratch
+locations, resource estimates, test scope and evidence.
+
 Run `pnpm new:route --help` to scaffold an API, HTML or browser route. Running without flags in an interactive terminal prompts for the namespace, filename, display name, source URL, maintainer, category and template. The command verifies the GitHub maintainer and checks the source URL, preserves existing namespaces, and refuses to overwrite routes. Adapt the generated endpoint or selectors and verify the example against the live site before submitting it. Browser templates wait for a selector, allow only required resource types, and await cleanup. Cache article details with `cache.tryGet()` if you add detail requests.
 
 Self-hosted instances can set `REQUEST_RATE_LIMITS='{"www.zhihu.com":{"points":1,"duration":5}}'` to space outgoing requests to specific hostnames. `duration` is measured in seconds; `points` is a positive integer. Matching is exact, so configure API subdomains separately. Limits apply per process or Worker isolate, including proxy requests; multiple replicas need an external shared limiter for a combined limit. Other websites retain their existing behavior.

@@ -1,25 +1,22 @@
-{ pkgs, lib, config, ... }:
+{ pkgs, lib, ... }:
 
+let
+  projectRoot = builtins.getEnv "PWD";
+  localConfig = projectRoot + "/devenv.local.nix";
+in
 {
-  # The flake integration does not provide the CLI's project-root discovery.
-  devenv.root = builtins.toString ./.;
+  # Flake shells need the working checkout, rather than the copied store source.
+  devenv.root = projectRoot;
 
-  # https://devenv.sh/basics/
   env = {
     NODE_ENV = "dev";
     NODE_OPTIONS = "--max-http-header-size=32768";
+    CHROMIUM_EXECUTABLE_PATH = "${pkgs.chromium}/bin/chromium";
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
   };
 
-  # https://devenv.sh/packages/
-  packages = with pkgs; [
-    git
-    prek
+  packages = with pkgs; [ git prek chromium ];
 
-    # Optional: Uncomment if you need browser automation
-    # chromium
-  ];
-
-  # https://devenv.sh/languages/
   languages.javascript = {
     enable = true;
     package = pkgs.nodejs_26;
@@ -29,80 +26,27 @@
     };
   };
 
-  # https://devenv.sh/services/
+  # E2E uses memory caching; a developer can opt into Redis for manual work.
   services.redis = {
-    enable = lib.mkDefault false;  # Disabled by default, users can enable in devenv.local.nix
+    enable = lib.mkDefault false;
     port = 6379;
   };
 
-  # https://devenv.sh/scripts/
-  scripts.rsshub-dev.exec = ''
-    pnpm run dev
-  '';
-
-  scripts.rsshub-build.exec = ''
-    pnpm run build
-  '';
-
-  scripts.rsshub-start.exec = ''
-    pnpm start
-  '';
-
-  scripts.rsshub-test.exec = ''
-    pnpm test
-  '';
-
-  # https://devenv.sh/processes/
-  processes = {
-    # Uncomment to auto-start RSSHub in dev mode when entering the shell
-    # rsshub.exec = "pnpm run dev";
-
-    # Example: Auto-start with Redis
-    # rsshub.exec = "pnpm run dev";
+  scripts = {
+    rsshub-setup.exec = ''
+      agent-job run heavy -- bash scripts/dev-setup.sh
+    '';
+    rsshub-dev.exec = ''pnpm run dev "$@"'';
+    rsshub-build.exec = ''agent-job run heavy -- pnpm run build "$@"'';
+    rsshub-start.exec = ''pnpm start "$@"'';
+    rsshub-test.exec = ''agent-job run heavy -- pnpm test "$@"'';
+    rsshub-e2e.exec = ''pnpm run test:e2e "$@"'';
   };
 
   enterShell = ''
-    # The dotenv module is unavailable when this configuration is loaded
-    # through the flake integration. Load the project environment explicitly.
-    if [ -f .env ]; then
-      set -a
-      . ./.env
-      set +a
-    fi
-
-    echo ""
-    echo "🚀 RSSHub Development Environment"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-    echo "Node.js:  $(node --version)"
-    echo "pnpm:     $(pnpm --version)"
-    ${lib.optionalString config.services.redis.enable ''
-    echo "Redis:    Running on port ${toString config.services.redis.port}"
-    ''}
-    echo ""
-    echo "Available commands:"
-    echo "  rsshub-dev     - Start development server (pnpm run dev)"
-    echo "  rsshub-build   - Build the project (pnpm run build)"
-    echo "  rsshub-start   - Start production server (pnpm start)"
-    echo "  rsshub-test    - Run tests (pnpm test)"
-    ${lib.optionalString (!config.services.redis.enable) ''
-    echo ""
-    echo "💡 Tip: Enable Redis by creating devenv.local.nix:"
-    echo "   { services.redis.enable = true; }"
-    ''}
-    echo ""
-    echo "Documentation: https://docs.rsshub.app"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-
-    # Install dependencies if node_modules doesn't exist
-    if [ ! -d "node_modules" ]; then
-      echo "📦 Installing dependencies..."
-      pnpm install
-    fi
+    echo "RSSHub: Node $(node --version), pnpm $(pnpm --version)"
+    echo "Run rsshub-setup once, rsshub-dev for development, rsshub-e2e for the isolated smoke test."
   '';
 
-  # Load local overrides if they exist
-  # Users can create devenv.local.nix for personal customizations
-  imports = lib.optional (builtins.pathExists ./devenv.local.nix) ./devenv.local.nix;
+  imports = lib.optional (builtins.pathExists localConfig) localConfig;
 }

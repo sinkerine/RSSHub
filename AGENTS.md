@@ -1,3 +1,46 @@
+## Development environment and E2E
+
+Enter with `direnv allow` (nix-direnv) or `nix develop --impure`. The flake
+provides Node 26, pnpm 12 and headless Chromium. Shell entry does not install
+dependencies or launch services. Run `rsshub-setup` to install the frozen lockfile
+under the shared queue; then use `rsshub-dev` for development. `.env` is loaded by
+direnv only. `nix develop` callers can supply environment variables explicitly.
+
+Rebuildable pnpm data lives in
+`${XDG_CACHE_HOME:-$HOME/.cache}/dev-scratch/rsshub/<sha256-of-checkout-path-first-16>/`
+(`pnpm-store` and `node_modules`), with normal checkout `node_modules` links.
+Do not remove these directories while a shell/server is using them.
+E2E uses a unique `e2e/run-*` child there, removes only its own temporary state
+after stopping the server/browser, and retains logs, feed XML, screenshot and
+`result.json` in `assets/build/e2e/run-*` in the checkout. Chromium socket files
+use a short system-temporary `rsshub-*` directory to stay below Unix socket path
+limits; teardown removes that directory after closing the browser.
+
+Run `rsshub-e2e` or `pnpm test:e2e` from the shell. These request qex admission.
+For asynchronous execution, use
+`agent-job submit --e2e browser -- nix develop --impure -c node scripts/e2e/run.mjs`
+and retain the returned job ID for status/logs. Do not queue the `test:e2e` wrapper
+again inside a reservation. Validate this declaration with `agent-job estimates`.
+
+The smoke journey uses one RSSHub process with memory caching, a random loopback
+port, an isolated private fixture route and one headless Chromium page. It checks
+health, RSS, JSON Feed and browser RSS parsing without fetching external websites.
+The 2-CPU/4-GiB estimate covers the prepared Nix shell, one Node server, one
+headless Chromium page and teardown. It is a workload estimate, not a measured
+peak. Dependency installation and cold shell realization are a separate `heavy`
+setup job, required before E2E; this journey performs no application build.
+This smoke test does not verify live routes.
+
+```qex-e2e browser
+{
+  "resources": {
+    "cpu": 2,
+    "mem": "4GiB"
+  },
+  "timeout": "15m"
+}
+```
+
 ## Review guidelines
 
 ### Route Configuration
