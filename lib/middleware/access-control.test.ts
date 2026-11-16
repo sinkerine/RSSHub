@@ -114,3 +114,24 @@ describe('protected Weibo OAuth', () => {
         expect((await app.request('/weibo/timeline/0?code=fake-oauth-code&state=00000000-0000-0000-0000-000000000000')).status).toBe(403);
     });
 });
+
+describe('internal MCP access boundary', () => {
+    it('only accepts the module-private env marker; HTTP headers/query/body cannot forge it', async () => {
+        vi.resetModules();
+        vi.stubEnv('ACCESS_KEY', 'internal-test-secret');
+        try {
+            const { createInternalRequestEnv } = await import('@/utils/internal-request');
+            const { default: middleware } = await import('./access-control');
+            const app = new Hono();
+            app.use(middleware);
+            app.get('/feed', (ctx) => ctx.text('ok'));
+            app.onError((error, ctx) => ctx.text(error.name, 403));
+            expect((await app.fetch(new Request('http://localhost/feed'), createInternalRequestEnv({}))).status).toBe(200);
+            expect((await app.request('/feed?internal=true', { headers: { 'x-rsshub-internal': 'true' } })).status).toBe(403);
+            expect((await app.request('/feed?key=internal-test-secret')).status).toBe(200);
+        } finally {
+            vi.unstubAllEnvs();
+            vi.resetModules();
+        }
+    });
+});

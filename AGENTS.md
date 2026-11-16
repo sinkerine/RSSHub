@@ -160,3 +160,28 @@ This smoke test does not verify live routes.
 49. **Parentheses in Arrow Functions**: Always use parentheses around arrow function parameters, even for single parameters.
 
 50. **No Tests for Routes**: Do not write test files for routes under `lib/routes/`. Route tests only encode the author's assumptions about the target site and go stale when it changes. Routes are verified through automatic route testing on pull requests, which runs the route examples against the live site.
+
+## MCP endpoint E2E
+
+Run `node scripts/e2e/mcp.mjs` under `agent-job run --e2e mcp` in the pinned
+Nix shell, or use `pnpm test:e2e:mcp`. Install dependencies with `rsshub-setup`
+and run `pnpm build` as separate heavy jobs first. The runner retains evidence
+under `assets/build/e2e/mcp-run-*` and cleans its checkout-keyed scratch state.
+It verifies both MCP protocol eras, allowlisted in-process feeds, shared memory
+cache, limits, timeouts, HTTP cancellation, Origin checks and the production
+Node build using a loopback fixture. It does not verify live Twitter/X, Redis,
+multiple replicas, HTTPS/proxy deployment or any particular agent product.
+The 2-CPU/4-GiB estimate covers one Node RSSHub process, the SDK clients, fixture
+upstream and teardown; setup and builds are separate workloads.
+
+The agent runs these E2E tests when a feature is first added; future pushes and deployments do not require rerunning them; existing unit tests must still be run.
+
+```qex-e2e mcp
+{
+  "resources": {
+    "cpu": 2,
+    "mem": "4GiB"
+  },
+  "timeout": "15m"
+}
+```

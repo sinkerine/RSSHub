@@ -4,6 +4,7 @@ import { jsxRenderer } from 'hono/jsx-renderer';
 import { trimTrailingSlash } from 'hono/trailing-slash';
 
 import api from '@/api';
+import { config } from '@/config';
 import { errorHandler, notFoundHandler } from '@/errors';
 import accessControl from '@/middleware/access-control';
 import antiHotlink from '@/middleware/anti-hotlink';
@@ -26,6 +27,11 @@ process.on('uncaughtException', (e) => {
 const app = new Hono();
 
 app.use(trimTrailingSlash());
+if (config.mcp.enable) {
+    const { createMcpEndpoint } = await import('@/mcp');
+    app.all('/mcp', createMcpEndpoint({ fetch: (request, env) => app.fetch(request, env) }));
+    logger.warn('MCP endpoint mounted at /mcp without authentication; restrict access at the network or reverse proxy');
+}
 app.use(compress());
 
 app.use(

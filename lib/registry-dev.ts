@@ -11,6 +11,7 @@ import { directoryImport } from '@/utils/directory-import';
 export type DevRegistry = {
     middleware: MiddlewareHandler;
     ensureAllLoaded: () => Promise<void>;
+    ensureLoaded: (names: string[]) => Promise<void>;
 };
 
 /**
@@ -121,5 +122,9 @@ export function createDevRegistry({ routesDirectory, namespaces }: { routesDirec
         await Promise.all([...topDirectories].map((name) => ensureTopDirectory(name)));
     };
 
-    return { middleware, ensureAllLoaded };
+    const ensureLoaded = async (names: string[]): Promise<void> => {
+        await Promise.all(names.filter((name) => topDirectories.has(name)).map((name) => ensureTopDirectory(name)));
+    };
+
+    return { middleware, ensureAllLoaded, ensureLoaded };
 }

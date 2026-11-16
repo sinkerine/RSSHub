@@ -1320,3 +1320,18 @@ require rerunning it, and existing unit tests must still be run.
 - The flake package `pnpmDeps` hash in `flake.nix` will no longer match the new lockfile. Upstream's update workflow
   only runs for `DIYgod`. Refreshing it is a deployment step (DOC3), not part of this feature.
 - `with-redis.sh` is a candidate for promotion to repo tooling so future unit runs match CI. Record at delivery.
+
+### Implementation clarifications
+
+These approved implementation rulings resolve contradictory wording above without changing the feature scope:
+
+- SDK schema rejection happens before tool execution. Empty or overlong paths and invalid limits return SDK-native
+  `isError: true` with `Input validation error` text and zero feed dispatch; they do not include the tool-produced
+  structured error object. The structured `invalid_arguments` code applies to path syntax rejected after schema
+  validation. The declared path/limit bounds stay unchanged.
+- The exact `createMcpHandler` options remain `legacy: 'stateless'` and `responseMode: 'json'`. SDK 2.4.0 applies the
+  JSON response option to modern exchanges; its stateless legacy transport emits SSE. Both protocol eras and the
+  HTTP-abort requirements remain required, and raw clients parse responses by Content-Type.
+- With `ACCESS_KEY` configured, external `/healthz` remains protected: no credential returns 403, and health checks
+  use the configured key to obtain 200. E2E health assertions therefore use the key without recording it in request
+  evidence. No external access-control exemption is added.

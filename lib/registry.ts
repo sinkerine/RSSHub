@@ -83,6 +83,8 @@ if (config.feature.disable_nsfw && !devRegistry) {
 
 export const ensureAllLoaded: () => Promise<void> = devRegistry?.ensureAllLoaded ?? (() => Promise.resolve());
 
+export const ensureNamespacesLoaded: (names: string[]) => Promise<void> = devRegistry?.ensureLoaded ?? (() => Promise.resolve());
+
 export { namespaces };
 
 const app = new Hono();
